@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"bytes"
 	"fmt"
-	"sync"
 )
 
 //Updates are assumed to be commutative.  Note that because of the interface
@@ -42,7 +41,7 @@ type tree node
 type forest tree
 
 func joinParentAndChild (parent *node, child *node, metaData updater) {
-	parent.Children[child.Loc] = record{
+	parent.Children[child.Loc.KeyString()] = record{
 		Loc: child.Loc,
 		Data: metaData,
 	}
@@ -54,13 +53,13 @@ func joinParentAndChild (parent *node, child *node, metaData updater) {
 
 //Adds a child to the node and returns the new child node.
 //It can, but is not intended to, be called on forest.  Use NewTree for that.
-func (n *node) MakeNode (metaData updater, data updater) (*node, error) {
+func makeNode (parent *node, metaData updater, data updater) (*node, error) {
 
 	var bucket location
-	if n.Height == 0 { //n = 0 is the root of the tree
-		bucket = n.Loc
+	if parent.Height == 0 { //parent = 0 is the root of the tree
+		bucket = parent.Loc
 	} else {
-		bucket = n.Loc.getBucketLocation()
+		bucket = parent.Loc.getBucketLocation()
 	}
 	loc, err := bucket.getNewLoc()
 
@@ -71,11 +70,11 @@ func (n *node) MakeNode (metaData updater, data updater) (*node, error) {
 	newNode := &node{
 		Loc: loc,
 		Data: data,
-		Height: n.Height + 1,
-		Children: make(map[string]int),
+		Height: parent.Height + 1,
+		Children: make(map[string]record),
 	}
 
-	joinParentAndChild(n, newNode, metaData)
+	joinParentAndChild(parent, newNode, metaData)
 
 	return newNode, err
 }
@@ -87,34 +86,35 @@ func (n *node) MakeNode (metaData updater, data updater) (*node, error) {
 func makeForest (root *node, NameSpace []byte, metaData updater, data updater) *forest {
 
 	loc := root.Loc.getNewLocWithId(&NameSpace)
-	f := &node{
+	n := &node{
 		Loc: loc,
 		Data: data,
-		Children: make(map[string]int),
+		Children: make(map[string]record),
 		Height: -1,
 	}
-	joinParentAndChild(root, f)
-	return f
+	joinParentAndChild(root, n, metaData)
+	f := forest(*n)
+	return &f
 }
 
-//adds a tree to the forest namespace and returns the new root.
-func MakeTree (parent *tree, metaData updater, data updater) (*node, error) {
+//adds a tree to the parent namespace and returns the new root.
+func makeTree (parent *tree, metaData updater, data updater) (*tree, error) {
 
-	loc, err := forest.Loc.getNewLoc() //creates a new namespace inside forest for this tree
+	loc, err := parent.Loc.getNewLoc() //creates a new namespace inside parent for this tree
 
 	if err != nil {
 		return nil, err
 	}
 
-	rootNode := &node{
+	rootNode := &tree{
 		Loc: loc,
 		Data: data,
 		Parent: record{
-			Loc: forest.Loc,
+			Loc: parent.Loc,
 			Data: metaData,
 		},
 		Height: parent.Height + 1,
-		Children: make(map[string]int),
+		Children: make(map[string]record),
 	}
 
 	metaNode := record{
@@ -122,7 +122,7 @@ func MakeTree (parent *tree, metaData updater, data updater) (*node, error) {
 		Data: metaData,
 	}
 
-	forest.Children[loc.KeyString()] = metaNode
+	parent.Children[loc.KeyString()] = metaNode
 
 	return rootNode, nil
 

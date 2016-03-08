@@ -36,10 +36,10 @@ func NewForest (nameSpace []byte, metaData updater, data updater) (*forest, erro
 	}
 
 	f := makeForest(root, nameSpace, metaData, data)
+	n := node(*f)
+	funnel.nodes[f.Loc.KeyString()] = &n
 
-	funnel.nodes[f.KeyString()] = f
-
-	return f
+	return f, nil
 }
 
 //Gets all metaRecords for forests in the db.  Modifications to the returned
@@ -63,7 +63,6 @@ func GetForests () ([]*forest, error) {
 	}
 
 	forests := make([]*forest, 0, len(forestMap))
-	var f *forest
 	for key, forestRecord := range forestMap {
 		f, err := forestRecord.GetForest()
 		if err != nil {
@@ -83,18 +82,24 @@ func (parent *tree) NewTree (metaData updater, data updater) (*tree, error) {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
 
-	updateableTree, err := getNodeIntoFunnel(parent.Loc)
+	n, err := getNodeIntoFunnel(parent.Loc)
+	t := tree(*n)
+	updateableTree := &t
 
 	if err != nil {
 		fmt.Println("error getting root into funnel: ", err)
 		return nil, err
 	}
 
-	newTree := makeTree(updateableTree, metaData, data)
+	newTree, err := makeTree(updateableTree, metaData, data)
+	if err != nil {
+		fmt.Println("error making tree: ", err)
+		return nil, err
+	}
 
-	funnel.nodes[newTree.Loc.KeyString()] = newTree
+	funnel.nodes[newTree.Loc.KeyString()] = n
 
-	return newTree
+	return newTree, err
 }
 
 //Gets the calling node's parent metaRecord.  Modifications to the returned forests cannot be 
@@ -105,7 +110,7 @@ func (r *record) GetParentMeta () (*record, error) {
 		fmt.Println("error loading node: ", err)
 		return nil, err
 	}
-	return &n.Parent
+	return &n.Parent, nil
 }
 
 //Gets the calling node's parent.  Modifications to the returned node cannot be
@@ -121,7 +126,7 @@ func (r *record) GetParent () (*node, error) {
 		fmt.Println("error getting parent node", err)
 		return nil, err
 	}
-	return parent
+	return parent, nil
 }
 
 //Gets the calling node's children's metaRecords.  Modifications to the
@@ -132,13 +137,13 @@ func (r *record) GetChildrenMeta () (map[string]record, error) {
 		fmt.Println("error loading node: ", err)
 		return nil, err
 	}
-	return n.Children
+	return n.Children, nil
 }
 
 //Gets all of the calling node's children.  Generally it's better to use
 //the meta version And load a subset of children based on the meta data stored in
 //the node.  Modifications to the returned nodes cannot be persisted.
-func (r *record) GetChildren () ([]*record, error) {
+func (r *record) GetChildren () ([]*node, error) {
 	childrenMeta, err := r.GetChildrenMeta()
 	if err != nil {
 		fmt.Println("error loading node: ", err)
@@ -146,83 +151,87 @@ func (r *record) GetChildren () ([]*record, error) {
 	}
 
 	children := make([]*node, 0, len(childrenMeta))
-	var f *forest
 	for key, childRecord := range children {
 		n, err := childRecord.Get()
 		if err != nil {
 			fmt.Println("error getting node: ", err)
 			fmt.Println("key = ", key)
 		}
-		children = append(children, f)
+		children = append(children, n)
 	}
 
-	return forests, nil
+	return children, nil
 
 }
 
 //Gets the node which the record describes (for instance if called on a child
 //metaRecord, gets the actual child node).
 func (r *record) Get () (*node, error) {
-	n, ok := r.(*node)
-	if !ok {
+	// n, ok := &node(*r)
+	// if !ok {
 		return getNode(r.Loc)
-	}
-	return n, nil
+	// }
+	// return n, nil
 }
 
 //Gets the node this record describes and converts it to a forest.  
 //Modifications to the returned forest cannot be persisted.
-func (r *record) GetForest () (*forest, err) {
+func (r *record) GetForest () (*forest, error) {
 	n, err := r.Get()
-	f, ok := n.(*forest)
-	return f
+	f := forest(*n)
+	return &f, err
 }
 
 //Gets the node this record describes and converts it to a forest.  
 //Modifications to the returned forest cannot be persisted.
-func (r *record) GetTree (updateData interface{}) (*tree, err) {
+func (r *record) GetTree () (*tree, error) {
 	n, err := r.Get()
-	t, ok := n.(*tree)
-	return t
+	t := tree(*n)
+	return &t, err
 }
 
 //Updates the node's internal data by calling .Update on the node's Data 
 //property and persisting the change to the server (eventually)
-func (r *record) updateNodeData (updateData interface{}) err {
+// func (r *record) updateNodeData (updateData interface{}) err {
 
-}
+// }
 
 //Updates the node's parent metaRecord and the node's parent's child metaRecord
 //for this node by calling .Update on both of these metaRecords and persisting
 //the change to the server (eventually)
-func (r *record) updateParentMeta (updateData interface{}) err {
+// func (r *record) updateParentMeta (updateData interface{}) err {
 
-}
+// }
 
 //Updates the node's child metaRecord and the node's child's parent metaRecord
 //for this node by calling .Update on both of these metaRecords and persisting
 //the change to the server (eventually).
-func (r *record) updateChildMeta (child *record, updateData interface{}) err {
+// func (r *record) updateChildMeta (child *record, updateData interface{}) err {
 
-}
+// }
 
 //Makes and persists (eventually) a child node of the calling node and updates
 //the calling node's children.  It doesn't return anything, because you won't
-//be able to access it on the db until the funnel flushes.
-func (r *record) NewNode (metaData updater, data updater) err {
+//be able to access it on the db until the funnel flushes. Modifications to the
+//returned forest cannot be persisted.
+func (r *record) NewNode (metaData updater, data updater) (*node, error) {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
 
-	updateableNode, err := getNodeIntoFunnel(record.Loc)
+	updateableNode, err := getNodeIntoFunnel(r.Loc)
 
 	if err != nil {
 		fmt.Println("error getting root into funnel: ", err)
 		return nil, err
 	}
 
-	newNode := makeNode(updateableNode, metaData, data)
+	newNode, err := makeNode(updateableNode, metaData, data)
+	if err != nil {
+		fmt.Println("error making node: ", err)
+		return nil, err
+	}
 
 	funnel.nodes[newNode.Loc.KeyString()] = newNode
 
-	return newNode
+	return newNode, nil
 }
