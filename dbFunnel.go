@@ -104,7 +104,10 @@ func clearFunnel() error {
 
 func makeRoot () error {
 	root := &node{
-		Loc: NoNameSpace,
+		record: &record{
+			Loc: NoNameSpace,
+		},
+		ChildBucket: NoNameSpace,
 		Children: make(map[string]record),
 	}
 	db, err := leveldb.OpenFile(dbPath, nil)
@@ -147,7 +150,7 @@ func makeRoot () error {
 
 //gets from the db.  Note that this will not necesarily be up to date if the
 //funnle has not cleared updates into the db.
-func getNode (l location) (*node, error) {
+func getNode (l locateable) (*node, error) {
 	var n *node
 	db, err := leveldb.OpenFile(dbPath, nil)
 	defer db.Close()
@@ -172,7 +175,7 @@ func getNode (l location) (*node, error) {
 //This allows update functions to behave atomically, without requiring 
 //rewriting all of the boilerplate of figuring out whether or not the node is
 //already in the funnel.  It should not be used outside of this context.
-func getNodeIntoFunnel (l location) (*node, error) {
+func getNodeIntoFunnel (l locateable) (*node, error) {
 	n, isInFunnel := funnel.nodes[l.KeyString()]
 
 	if !isInFunnel {

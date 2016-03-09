@@ -7,16 +7,45 @@ import (
 	"fmt"
 )
 
+
+
+//this type is just a lexical device to make it clear when an argument 
+//represents something that will be passed to an updater's .Update method.
+type updateData interface{}
+
 //Updates are assumed to be commutative.  Note that because of the interface
 //type of the argument, this method will have to coerce it's argument.
 type updater interface {
-	Update(interface{}) error
+	Update(updateData) error
 }
 
-//a record is a location in the db and some data.
+//allows records and nodes to be handled by the same methods.  This ends up
+//simplifying the API in levTree.go a lot since it gives me a lot freedom in
+//when to use type conversion and
+type locateable interface {
+	Key() []byte
+	KeyString() string
+	Update(updateData) error
+	GetData() updater
+}
+
+//a record describes a location in the db.
 type record struct {
 	Loc location
 	Data updater
+}
+
+func (r *record) Key() []byte {
+	return r.Loc.Key()
+}
+func (r *record) KeyString() string {
+	return r.Loc.KeyString()
+}
+func (r *record) Update(u updateData) error {
+	return r.Data.Update(u)
+}
+func (r *record) GetData() updater {
+	return r.Data
 }
 
 //one tree node.  It is itself a record and contains records, but it's
@@ -26,19 +55,28 @@ type record struct {
 //locations and this one.  this is meant to allow a user to traverse the tree
 //without loading more nodes from the db than necesary.
 type node struct {
-	record
-	Loc location
-	Data updater
+	*record
 
 	Height int
 
 	Parent record
+
+	ChildBucket location
 	Children map[string]record //maps child locations to indices in children slice
 }
 
-type tree node
-
-type forest tree
+func (n *node) Key() []byte {
+	return n.record.Key()
+}
+func (n *node) KeyString() string {
+	return n.record.KeyString()
+}
+func (n *node) Update(u updateData) error {
+	return n.record.Update(u)
+}
+func (n *node) GetData() updater {
+	return n.record.GetData()
+}
 
 func joinParentAndChild (parent *node, child *node, metaData updater) {
 	parent.Children[child.Loc.KeyString()] = record{
@@ -51,84 +89,78 @@ func joinParentAndChild (parent *node, child *node, metaData updater) {
 	}
 }
 
-//Adds a child to the node and returns the new child node.
-//It can, but is not intended to, be called on forest.  Use NewTree for that.
-func makeNode (parent *node, metaData updater, data updater) (*node, error) {
+//Creates a node whose children will be in the same namespace as this branch.
+func makeBranch (parent *node, metaData updater, data updater) (*node, error) {
 
-	var bucket location
-	if parent.Height == 0 { //parent = 0 is the root of the tree
-		bucket = parent.Loc
-	} else {
-		bucket = parent.Loc.getBucketLocation()
-	}
+	bucket := parent.ChildBucket
+
 	loc, err := bucket.getNewLoc()
 
 	if err != nil {
+		fmt.Println("error getting new location", err)
 		return nil, err
 	}
 
-	newNode := &node{
-		Loc: loc,
-		Data: data,
-		Height: parent.Height + 1,
-		Children: make(map[string]record),
-	}
-
-	joinParentAndChild(parent, newNode, metaData)
-
-	return newNode, err
-}
-
-
-
-//Sets up the root nameSpace for all trees.  If this is not called then forest
-//is set as a node at location NoNameSpace and has no data attached.
-func makeForest (root *node, NameSpace []byte, metaData updater, data updater) *forest {
-
-	loc := root.Loc.getNewLocWithId(&NameSpace)
-	n := &node{
-		Loc: loc,
-		Data: data,
-		Children: make(map[string]record),
-		Height: -1,
-	}
-	joinParentAndChild(root, n, metaData)
-	f := forest(*n)
-	return &f
-}
-
-//adds a tree to the parent namespace and returns the new root.
-func makeTree (parent *tree, metaData updater, data updater) (*tree, error) {
-
-	loc, err := parent.Loc.getNewLoc() //creates a new namespace inside parent for this tree
-
-	if err != nil {
-		return nil, err
-	}
-
-	rootNode := &tree{
-		Loc: loc,
-		Data: data,
-		Parent: record{
-			Loc: parent.Loc,
-			Data: metaData,
+	newBranch := &node{
+		record: &record{
+			Loc: loc,
+			Data: data,
 		},
 		Height: parent.Height + 1,
+		ChildBucket: bucket,
 		Children: make(map[string]record),
 	}
 
-	metaNode := record{
-		Loc: loc,
-		Data: metaData,
-	}
+	joinParentAndChild(parent, newBranch, metaData)
 
-	parent.Children[loc.KeyString()] = metaNode
-
-	return rootNode, nil
-
+	return newBranch, err
 }
 
-//serializes the record into a gob and returns it as a byte slice
+//creates a branch of the parent node who's children will be in a different
+//namespace than the new branch
+func makeTree (parent *node, metaData updater, data updater) (*node, error) {
+	newTree, err := makeBranch(parent, metaData, data)
+
+	if err != nil {
+		fmt.Println("Error creating template branch: ", err)
+		return nil, err
+	}
+
+	newTree.ChildBucket = newTree.record.Loc
+
+	return newTree, nil
+}
+
+func (n *node) IsTree() bool {
+	//branch nodes put their children in the same bucket that they are in while
+	//trees put their children in a different bucket (currently tree children
+	//have their namespace set to the id of the tree node, but this may change
+	//in the future when I start optimizing for sequential reads through trees)
+	return !n.record.Loc.getBucketLocation().equals(n.ChildBucket)
+}
+
+//creates a tree at height 0
+func makeForest (root *node, metaData updater, data updater) (*node, error) {
+	newForest, err := makeTree(root, metaData, data)
+	
+	if err != nil {
+		fmt.Println("Error creating template tree: ", err)
+		return nil, err
+	}
+
+	newForest.Height = 0
+	
+	return newForest, nil
+}
+
+func (n *node) IsForest() bool {
+	//the only special characteristic of a forest is that it's Height is 0.
+	//it's worth noting that this will return true for the root as well as
+	//forests.
+	return n.Height == 0 && n.IsTree()
+}
+
+//serializes the node into a gob and returns it as a byte slice
 func (n *node) serialize () ([]byte, error) {
 	gobble := new(bytes.Buffer)
 	enc := gob.NewEncoder(gobble)
@@ -156,16 +188,6 @@ func (n *node) deserialize(value []byte) error {
 	return nil
 }
 
-//A passthrough to abstract out the location module from modules importing this module
-func (n *node) Key () []byte {
-	return n.Loc.Key()
-}
-
-//A passthrough to abstract out the location module from modules importing this module
-func (r *record) Key () []byte {
-	return r.Loc.Key()
-}
-
 //registers required types with gob.  Any named types contained in a 
 //record's data property must also be registered before serializing or 
 //deserializing to or from the db.
@@ -173,6 +195,4 @@ func init () {
 	gob.Register(location{})
 	gob.Register(record{})
 	gob.Register(node{})
-	gob.Register(tree{})
-	gob.Register(forest{})
 }
