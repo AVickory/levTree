@@ -20,8 +20,9 @@ type updater interface {
 }
 
 //allows records and nodes to be handled by the same methods.  This ends up
-//simplifying the API in levTree.go a lot since it gives me a lot freedom in
-//when to use type conversion and
+//simplifying the API in levTree.go a lot since I only have to type assert once
+//instead of needing lots of internal type conversions or copies of identical
+//functions
 type locateable interface {
 	Key() []byte
 	KeyString() string
@@ -87,6 +88,26 @@ func joinParentAndChild (parent *node, child *node, metaData updater) {
 		Loc: parent.Loc,
 		Data: metaData,
 	}
+}
+
+//Updates the parent metaData for the child Node and the child metaData for the parent Node.  
+func updateConnectionMeta (parent *node, child *node, u updateData) error {
+
+	err := child.Parent.Update(u)
+
+	if err != nil {
+		fmt.Println("error getting updating child node's parent", err)
+		return err
+	}
+
+	parent.Children[child.KeyString()] = child.Parent
+
+	if err != nil {
+		fmt.Println("error getting updating child node's parent", err)
+		return err
+	}
+
+	return err
 }
 
 //Creates a node whose children will be in the same namespace as this branch.
