@@ -1,12 +1,11 @@
-/*
-provides a bucketing system for namespacing keys.  id generation defaults to
-guuid V4, which is sufficient for my usecase, but other options may be added
-later.  Until then, you can use getNewLocationWithKey if you'd like to use
-another method of generating ids, but there is no guarantee of uniqueness.
-(although that's technically true of guuid V4 as well)
-*/
+
 package levTree
 
+/*
+The Location module provides a bucketing system for namespacing keys.  id 
+generation defaults to guuid V4, which is sufficient for my usecase, but other
+options may be added later.
+*/
 
 //wishList
 // - module augmenting location to take advantage of leveldb's key sorting
@@ -29,9 +28,9 @@ type location struct {
 	Id id
 }
 
-//NoNameSpace is a blank location to be used as the zeroth tier bucket.
-//This module will break if anything is put inside NoNameSpace.
-var NoNameSpace location = location{}
+//noNameSpace is a blank location to be used as the zeroth tier bucket.
+//This module will break if anything is put inside noNameSpace.
+var noNameSpace location = location{}
 
 //Converts the location into a single byte slice
 func (l location) Key () []byte {
@@ -68,7 +67,7 @@ func (l location) getBucketLocation () location {
 			Id: l.Buckets[bucketIndex],
 		}
 	} else {
-		return NoNameSpace
+		return noNameSpace
 	}
 }
 
@@ -78,7 +77,7 @@ func (bucket location) getNewLocWithId (identifier id) location {
 		return bucket
 	}
 	numBuckets := len(bucket.Buckets)
-	if !bucket.equals(NoNameSpace) {
+	if !bucket.equals(noNameSpace) {
 		newBucket := make([]id, numBuckets, numBuckets + 1)
 		copy(newBucket, bucket.Buckets)
 		newBucket = append(newBucket, bucket.Id)
@@ -88,7 +87,7 @@ func (bucket location) getNewLocWithId (identifier id) location {
 		}
 	} else {
 		return location{
-			Buckets: NoNameSpace.Buckets,
+			Buckets: noNameSpace.Buckets,
 			Id: identifier,
 		}
 	}

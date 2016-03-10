@@ -1,5 +1,41 @@
-//Sets up the data structures required to represent tree nodes in memory
 package levTree
+/*
+The Tree module sets up the data structures required to represent tree nodes in
+memory.  The basic building block is the record which consists of a location
+and some data (location basically being a key in the database).
+
+Nodes contain a record with thier own location and the data that's meant
+to be stored on that node.  They also contain a parent record which contains
+thier parent's location and some data describing thier parent.  Additionally
+they have a record for each of that node's children.
+
+Within the provided API, note that a locateable can be either a record or a 
+node.  This simplifies the api so that calling .UpdateNodeData on a node's
+parent record is the same thing as calling it on the parent.
+
+Within the database there are four kinds of nodes.  They are not different
+types, again to simplify the API, but rather designate how thier children will
+be bucketed relative to themselves.
+
+Branch - A "normal" node.  Children of this kind of node will be in the same bucket
+that this node is.  Most nodes should be Branches since other types will cause
+the keys in the database to get progressively longer.  a single branch should
+generally hold all of the data that you'll need on a given db access (within
+reason; leveldb will run slowly if your entries get to long).
+
+Tree - The root node of a single tree.  A tree is a node who's children will use the
+tree's key as thier bucket.  They allow for grouping of related entries in the
+db and allow for sequential access of all of thier descendants at once.  Trees
+are generally meant to be the children of either other trees or forests.
+
+Forest - A tree node that is attached to the root node of the db.  If you're
+coming from a SQL background, then you might think about forests as your 
+database's tables and a forest's child trees as sub tables.
+
+Root - the bottom namespace of the database.  This node is just a place to hold
+Meta data about your forests.  Since you can't directly name your forests, you
+can instead put identifying data in the root's child metadata records.
+*/
 
 import (
 	"encoding/gob"
@@ -64,6 +100,10 @@ type node struct {
 
 	ChildBucket location
 	Children map[string]record //maps child locations to indices in children slice
+}
+
+var rootRecord *record = &record{
+	Loc: noNameSpace,
 }
 
 func (n *node) Key() []byte {
@@ -172,6 +212,17 @@ func makeForest (root *node, metaData updater, data updater) (*node, error) {
 	newForest.Height = 0
 	
 	return newForest, nil
+}
+
+
+func makeRoot () *node {
+	return &node{
+		record: &record{
+			Loc: noNameSpace,
+		},
+		ChildBucket: noNameSpace,
+		Children: make(map[string]record),
+	}
 }
 
 func (n *node) IsForest() bool {
