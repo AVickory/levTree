@@ -67,7 +67,9 @@ through the provided read methods or is on the db.  All reads from the api go
 to the database itself and bypass the funnel so that reads and writes don't
 have to compete for access.  When an update is called for an node that is in
 the funnel that update will be applied to that copy of the node in the funnel.
+
 location.go
+
 The Location module provides a bucketing system for namespacing keys.  id 
 generation defaults to guuid V4, which is sufficient for my usecase, but other
 options may be added later.
