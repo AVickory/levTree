@@ -1,21 +1,14 @@
-
 package levTree
 
 /*
-The Location module provides a bucketing system for namespacing keys.  id 
+The Location module provides a bucketing system for namespacing keys.  id
 generation defaults to guuid V4, which is sufficient for my usecase, but other
 options may be added later.
 */
 
-//wishList
-// - module augmenting location to take advantage of leveldb's key sorting
-	//(wouldn't it be cool if you could pull out a root-to-leaf path
-	//with a sequential read.)
-// - related: implement easily sharded namespacing that is also searcheable
-
 import (
-	"github.com/nu7hatch/gouuid"
 	"fmt"
+	"github.com/nu7hatch/gouuid"
 )
 
 //A namespace Component.
@@ -25,7 +18,7 @@ type id *[]byte
 //translated into a byte slice key.
 type location struct {
 	Buckets []id
-	Id id
+	Id      id
 }
 
 //noNameSpace is a blank location to be used as the zeroth tier bucket.
@@ -33,7 +26,7 @@ type location struct {
 var noNameSpace location = location{}
 
 //Converts the location into a single byte slice
-func (l location) Key () []byte {
+func (l location) Key() []byte {
 	if l.Id != nil {
 		var key []byte
 		for _, v := range l.Buckets {
@@ -47,24 +40,24 @@ func (l location) Key () []byte {
 
 //produces the key as a string.  This is primarily so that locations can be
 //converted to the keys of maps.
-func (l location) KeyString () string {
+func (l location) KeyString() string {
 	return string(l.Key())
 }
 
 //Checks if both locations produce the same stringified key.  This is an
 //imperfect method of checking equality, but will do for the initial
 //implementation.
-func (l1 location) equals (l2 location) bool {
+func (l1 location) equals(l2 location) bool {
 	return l1.KeyString() == l2.KeyString()
 }
 
 //creates a location object for the bucket containing this location
-func (l location) getBucketLocation () location {
+func (l location) getBucketLocation() location {
 	bucketIndex := len(l.Buckets) - 1
 	if bucketIndex >= 0 {
 		return location{
 			Buckets: l.Buckets[:bucketIndex],
-			Id: l.Buckets[bucketIndex],
+			Id:      l.Buckets[bucketIndex],
 		}
 	} else {
 		return noNameSpace
@@ -72,32 +65,32 @@ func (l location) getBucketLocation () location {
 }
 
 //creates a location inside this bucket with the given id
-func (bucket location) getNewLocWithId (identifier id) location {
+func (bucket location) getNewLocWithId(identifier id) location {
 	if len(*identifier) == 0 {
 		return bucket
 	}
 	numBuckets := len(bucket.Buckets)
 	if !bucket.equals(noNameSpace) {
-		newBucket := make([]id, numBuckets, numBuckets + 1)
+		newBucket := make([]id, numBuckets, numBuckets+1)
 		copy(newBucket, bucket.Buckets)
 		newBucket = append(newBucket, bucket.Id)
 		return location{
 			Buckets: newBucket,
-			Id: identifier,
+			Id:      identifier,
 		}
 	} else {
 		return location{
 			Buckets: noNameSpace.Buckets,
-			Id: identifier,
+			Id:      identifier,
 		}
 	}
 }
 
 //creates a location inside this bucket with an auto generated id
-func (bucket location) getNewLoc () (location, error) {
+func (bucket location) getNewLoc() (location, error) {
 	identifier, err := uuid.NewV4()
 
-	if(err != nil) {
+	if err != nil {
 		fmt.Println("UUID GENERATOR ERROR: ", err)
 		return bucket, err
 	}
