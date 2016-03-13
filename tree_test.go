@@ -56,7 +56,7 @@ func testNode(t *testing.T, parent Node, n Node, metaData updater, data updater)
 func testBranch(t *testing.T, parent Node, branch Node, metaData updater, data updater) {
 	testNode(t, parent, branch, metaData, data)
 	if branch.Height != parent.Height+1 {
-		t.Error("branch should be at height + 1")
+		t.Error("branch should be at height parent + 1 ")
 	}
 	if !branch.ChildBucket.equals(parent.ChildBucket) {
 		t.Error("branch will put children in wrong bucket!")
@@ -66,7 +66,7 @@ func testBranch(t *testing.T, parent Node, branch Node, metaData updater, data u
 func testTree(t *testing.T, parent Node, tree Node, metaData updater, data updater) {
 	testNode(t, parent, tree, metaData, data)
 	if tree.Height != parent.Height+1 {
-		t.Error("tree should be at height + 1: ")
+		t.Error("tree should be at height parent + 1: ")
 	}
 	if tree.ChildBucket.equals(parent.Loc) {
 		t.Error("tree will put children in wrong bucket!")
@@ -76,7 +76,7 @@ func testTree(t *testing.T, parent Node, tree Node, metaData updater, data updat
 func testForest(t *testing.T, root Node, forest Node, metaData updater, data updater) {
 	testNode(t, root, forest, metaData, data)
 	if forest.Height != 0 {
-		t.Error("forest should be at height + 1: ")
+		t.Error("forest should be at height = 0: ")
 	}
 	if forest.ChildBucket.equals(root.Loc) {
 		t.Error("forest will put children in wrong bucket!")
