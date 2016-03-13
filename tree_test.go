@@ -87,7 +87,7 @@ func TestMakeForest(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
@@ -103,11 +103,11 @@ func TestMakeTwoForests(t *testing.T) {
 
 	root := makeRoot()
 
-	forest1, err := makeForest(root, metaData1, data1)
+	root, forest1, err := makeForest(root, metaData1, data1)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
-	forest2, err := makeForest(root, metaData2, data2)
+	root, forest2, err := makeForest(root, metaData2, data2)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
@@ -121,13 +121,13 @@ func TestMakeTree(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataTree := mockUpdateable(3)
 	dataTree := mockUpdateable(4)
-	tree, err := makeTree(forest, metaDataTree, dataTree)
+	forest, tree, err := makeTree(forest, metaDataTree, dataTree)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
@@ -138,19 +138,19 @@ func TestMakeTwoTrees(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataTree1 := mockUpdateable(3)
 	dataTree1 := mockUpdateable(4)
-	tree1, err := makeTree(forest, metaDataTree1, dataTree1)
+	forest, tree1, err := makeTree(forest, metaDataTree1, dataTree1)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
 	metaDataTree2 := mockUpdateable(5)
 	dataTree2 := mockUpdateable(6)
-	tree2, err := makeTree(forest, metaDataTree2, dataTree2)
+	forest, tree2, err := makeTree(forest, metaDataTree2, dataTree2)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
@@ -162,19 +162,19 @@ func TestMakeTreeOnTree(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataTree1 := mockUpdateable(3)
 	dataTree1 := mockUpdateable(4)
-	tree1, err := makeTree(forest, metaDataTree1, dataTree1)
+	forest, tree1, err := makeTree(forest, metaDataTree1, dataTree1)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
 	metaDataTree2 := mockUpdateable(5)
 	dataTree2 := mockUpdateable(6)
-	tree2, err := makeTree(tree1, metaDataTree2, dataTree2)
+	tree1, tree2, err := makeTree(tree1, metaDataTree2, dataTree2)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
@@ -185,13 +185,13 @@ func TestMakeBranch(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataBranch := mockUpdateable(3)
 	dataBranch := mockUpdateable(4)
-	branch, err := makeBranch(forest, metaDataBranch, dataBranch)
+	forest, branch, err := makeBranch(forest, metaDataBranch, dataBranch)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
@@ -202,19 +202,19 @@ func TestMakeTwoBranches(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataBranch1 := mockUpdateable(3)
 	dataBranch1 := mockUpdateable(4)
-	branch1, err := makeBranch(forest, metaDataBranch1, dataBranch1)
+	forest, branch1, err := makeBranch(forest, metaDataBranch1, dataBranch1)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
 	metaDataBranch2 := mockUpdateable(5)
 	dataBranch2 := mockUpdateable(6)
-	branch2, err := makeBranch(forest, metaDataBranch2, dataBranch2)
+	forest, branch2, err := makeBranch(forest, metaDataBranch2, dataBranch2)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
@@ -226,19 +226,19 @@ func TestMakeBranchOnTree(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataTree := mockUpdateable(3)
 	dataTree := mockUpdateable(4)
-	tree, err := makeTree(forest, metaDataTree, dataTree)
+	forest, tree, err := makeTree(forest, metaDataTree, dataTree)
 	if err != nil {
 		t.Error("ERROR MAKING TREE: ", err)
 	}
 	metaDatabranch := mockUpdateable(5)
 	databranch := mockUpdateable(6)
-	branch, err := makeBranch(tree, metaDatabranch, databranch)
+	tree, branch, err := makeBranch(tree, metaDatabranch, databranch)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
@@ -249,19 +249,19 @@ func TestMakeBranchOnBranch(t *testing.T) {
 	metaData := mockUpdateable(1)
 	data := mockUpdateable(2)
 	root := makeRoot()
-	forest, err := makeForest(root, metaData, data)
+	root, forest, err := makeForest(root, metaData, data)
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
 	metaDataBranch1 := mockUpdateable(3)
 	dataBranch1 := mockUpdateable(4)
-	branch1, err := makeBranch(forest, metaDataBranch1, dataBranch1)
+	forest, branch1, err := makeBranch(forest, metaDataBranch1, dataBranch1)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
 	metaDataBranch2 := mockUpdateable(3)
 	dataBranch2 := mockUpdateable(4)
-	branch2, err := makeBranch(branch1, metaDataBranch2, dataBranch2)
+	branch1, branch2, err := makeBranch(branch1, metaDataBranch2, dataBranch2)
 	if err != nil {
 		t.Error("ERROR MAKING BRANCH: ", err)
 	}
@@ -327,27 +327,27 @@ func convertNumToUpdater(x int) updater {
 
 func TestSerializeDeSerialize (t *testing.T) {
 	root := makeRoot()
-	forest, err := makeForest(root, convertNumToUpdater(-1), convertNumToUpdater(0))
+	root, forest, err := makeForest(root, convertNumToUpdater(-1), convertNumToUpdater(0))
 	if err != nil {
 		t.Error("ERROR MAKING FOREST: ", err)
 	}
-	tree, err := makeTree(forest, convertNumToUpdater(1), convertNumToUpdater(2))
+	forest, tree, err := makeTree(forest, convertNumToUpdater(1), convertNumToUpdater(2))
 	if err != nil {
 		t.Error("GUUID ERROR", err)
 	}
-	n1, err := makeBranch(tree, convertNumToUpdater(3), convertNumToUpdater(4))
+	tree, n1, err := makeBranch(tree, convertNumToUpdater(3), convertNumToUpdater(4))
 	if err != nil {
 		t.Error("GUUID ERROR", err)
 	}
-	n2, err := makeBranch(tree, convertNumToUpdater(5), convertNumToUpdater(6))
+	tree, n2, err := makeBranch(tree, convertNumToUpdater(5), convertNumToUpdater(6))
 	if err != nil {
 		t.Error("GUUID ERROR", err)
 	}
-	n11, err := makeBranch(n1, convertNumToUpdater(7), convertNumToUpdater(8))
+	n1, n11, err := makeBranch(n1, convertNumToUpdater(7), convertNumToUpdater(8))
 	if err != nil {
 		t.Error("GUUID ERROR", err)
 	}
-	n12, err := makeBranch(n1, convertNumToUpdater(9), convertNumToUpdater(10))
+	n1, n12, err := makeBranch(n1, convertNumToUpdater(9), convertNumToUpdater(10))
 	if err != nil {
 		t.Error("GUUID ERROR", err)
 	}

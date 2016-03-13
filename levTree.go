@@ -119,7 +119,7 @@ func NewForest(metaData updater, data updater) error {
 		return err
 	}
 
-	newForest, err := makeForest(root, metaData, data)
+	root, newForest, err := makeForest(root, metaData, data)
 
 	if err != nil {
 		fmt.Println("error making forest Node: ", err)
@@ -146,7 +146,7 @@ func NewTree(parent locateable, metaData updater, data updater) error {
 		return err
 	}
 
-	newTree, err := makeTree(updatedParent, metaData, data)
+	updatedParent, newTree, err := makeTree(updatedParent, metaData, data)
 
 	if err != nil {
 		fmt.Println("error making tree: ", err)
@@ -174,7 +174,7 @@ func NewBranch(parent locateable, metaData updater, data updater) error {
 		return err
 	}
 
-	newBranch, err := makeBranch(updatedParent, metaData, data)
+	updatedParent, newBranch, err := makeBranch(updatedParent, metaData, data)
 
 	if err != nil {
 		fmt.Println("error making Node: ", err)
@@ -293,11 +293,15 @@ func updateChildMeta(parent locateable, child locateable, u updateData) error {
 //into consistency errors and avoid making more database queries than you need.
 func Get(l locateable) (Node, error) {
 	n, ok := l.(Node)
-
+	var err error
 	if !ok {
-		return getNodeAt(l)
+		n, err = getNodeAt(l)
+		if err != nil {
+			fmt.Println("error getting location's node", err)
+			return n, err
+		}
 	}
-
+	
 	return n, nil
 }
 

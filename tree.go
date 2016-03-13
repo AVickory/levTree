@@ -165,7 +165,7 @@ func updateConnectionMeta(parent Node, child Node, u updateData) error {
 }
 
 //Creates a Node whose children will be in the same namespace as this branch.
-func makeBranch(parent Node, metaData updater, data updater) (Node, error) {
+func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error) {
 	var newBranch Node
 	bucket := parent.ChildBucket
 
@@ -173,7 +173,7 @@ func makeBranch(parent Node, metaData updater, data updater) (Node, error) {
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
-		return newBranch, err
+		return parent, newBranch, err
 	}
 
 	newBranch = Node{
@@ -188,22 +188,22 @@ func makeBranch(parent Node, metaData updater, data updater) (Node, error) {
 
 	parent, newBranch = joinParentAndChild(parent, newBranch, metaData)
 
-	return newBranch, err
+	return parent, newBranch, err
 }
 
 //creates a branch of the parent Node who's children will be in a different
 //namespace than the new branch
-func makeTree(parent Node, metaData updater, data updater) (Node, error) {
-	newTree, err := makeBranch(parent, metaData, data)
+func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
+	parent, newTree, err := makeBranch(parent, metaData, data)
 
 	if err != nil {
 		fmt.Println("Error creating template branch: ", err)
-		return newTree, err
+		return parent, newTree, err
 	}
 
 	newTree.ChildBucket = newTree.Record.Loc
 
-	return newTree, nil
+	return parent, newTree, nil
 }
 
 func (n Node) IsTree() bool {
@@ -216,17 +216,17 @@ func (n Node) IsTree() bool {
 
 //creates a tree at height 0 attached to the root.  root should be the root of the db.  You could,
 //but shouldn't, pass any other Node to this function
-func makeForest(root Node, metaData updater, data updater) (Node, error) {
-	newForest, err := makeTree(root, metaData, data)
-
+func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
+	root, newForest, err := makeTree(root, metaData, data)
+	
 	if err != nil {
 		fmt.Println("Error creating template tree: ", err)
-		return newForest, err
+		return root, newForest, err
 	}
 
 	newForest.Height = 0
 
-	return newForest, nil
+	return root, newForest, nil
 }
 
 func (n Node) IsForest() bool {
