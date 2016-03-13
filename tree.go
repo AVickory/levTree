@@ -125,6 +125,10 @@ func (n Node) GetData() updater {
 }
 
 func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) {
+	if parent.Children == nil {
+		parent.Children = make(map[string]Record)
+	}
+
 	parent.Children[child.Loc.KeyString()] = Record{
 		Loc:  child.Loc,
 		Data: metaData,
