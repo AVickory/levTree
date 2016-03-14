@@ -191,7 +191,7 @@ func NewBranch(parent locateable, metaData updater, data updater) error {
 //property and persisting the change to the server (eventually).
 //it doesn't return the updated Node because that Node will not reflect the
 //version of the Node that is on the db
-func updateNodeData(l locateable, u updateData) error {
+func UpdateNodeData(l locateable, u updateData) error {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
 

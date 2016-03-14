@@ -77,11 +77,12 @@ func (r Record) KeyString() string {
 }
 func (r Record) Update(u updateData) (Record, error) {
 	Data, err := r.Data.Update(u)
-	r.Data = Data
+
 	if err != nil {
 		fmt.Println("error updating record")
 		return r, err
 	}
+	r.Data = Data
 	return r, nil
 }
 func (r Record) GetData() updater {
@@ -113,6 +114,7 @@ func (n Node) KeyString() string {
 	return n.Record.KeyString()
 }
 func (n Node) Update(u updateData) (Record, error) {
+
 	r, err := n.Record.Update(u)
 	n.Record = r
 	if err != nil {

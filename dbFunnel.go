@@ -240,10 +240,12 @@ func getNodeAt(l locateable) (Node, error) {
 //rewriting all of the boilerplate of figuring out whether or not the Node is
 //already in the funnel.  It should not be used outside of this context.
 func getNodeIntoFunnel(l locateable) (Node, error) {
+
 	n, isInFunnel := funnel.nodes[l.KeyString()]
 
 	if !isInFunnel {
-		n, err := getNodeAt(l)
+		var err error
+		n, err = getNodeAt(l)
 
 		if err != nil {
 			fmt.Println("Error getting Node: ", err)

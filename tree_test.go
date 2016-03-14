@@ -16,9 +16,11 @@ func init() {
 	// gob.Register(Node{})
 }
 
-func (number mockUpdateable) Update(u updateData) (updater, error) {
-	number += u.(mockUpdateable)
-	return number, nil
+func (data mockUpdateable) Update(u updateData) (updater, error) {
+	number := int(data)
+	number += u.(int)
+	data = mockUpdateable(number)
+	return data, nil
 }
 
 func testParentChildRel(t *testing.T, parent Node, child Node) {
