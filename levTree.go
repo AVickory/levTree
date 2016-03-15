@@ -359,11 +359,11 @@ func GetChildrenMeta(parent locateable) (map[string]Record, error) {
 func GetChildren(parent locateable) ([]Node, error) {
 	childrenMeta, err := GetChildrenMeta(parent)
 
+
 	if err != nil {
 		fmt.Println("error loading Node: ", err)
 		return nil, err
 	}
-
 	children := make([]Node, 0, len(childrenMeta))
 	for key, childRecord := range childrenMeta {
 		n, err := Get(childRecord)
