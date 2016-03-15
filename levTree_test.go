@@ -180,7 +180,13 @@ func TestNewTree (t *testing.T) {
 
 	clearFunnel()
 
-	trees, err := GetChildren(forest.Record)
+	forest, err = Get(forest.Record)
+
+	if err != nil {
+		t.Error("error loading updated forest", err)
+	}
+
+	trees, err := GetChildren(forest)
 
 	if err != nil {
 		t.Error("error getting updated first level trees", err)
@@ -206,8 +212,20 @@ func TestNewTree (t *testing.T) {
 
 	childTree := tempTreeList[0]
 
-	if updatedParentTree.Data != parentTree.Data {
-		t.Error("adding a child changed parent's data!")
+	if !forest.Loc.equals(updatedParentTree.Parent.Loc) {
+		t.Error("parent tree's parent is not forest")
+	}
+
+	if !forest.Children[updatedParentTree.KeyString()].Loc.equals(updatedParentTree.Loc) {
+		t.Error("forest does not have parent tree as child")
+	}
+
+	if !forest.Loc.equals(notParentTree.Parent.Loc) {
+		t.Error("parent tree's parent is not forest")
+	}
+
+	if !forest.Children[notParentTree.KeyString()].Loc.equals(notParentTree.Loc) {
+		t.Error("forest does not have parent tree as child")
 	}
 
 	if !childTree.Parent.Loc.equals(updatedParentTree.Loc) {
@@ -215,12 +233,149 @@ func TestNewTree (t *testing.T) {
 	}
 
 	if !updatedParentTree.Children[childTree.KeyString()].Loc.equals(childTree.Loc) {
+		t.Error("parent does not have right data for child")
+	}
+
+	if !updatedParentTree.Children[childTree.KeyString()].Loc.equals(childTree.Loc) {
 		t.Error("parent does not have the right data for it's child")
 	}
 
-	if notParentTree.Data != convertNumToUpdater(4) {
-		t.Error("the not parent tree has the wrong data!")
-	}
 }
 
 
+
+
+func TestNewBranch (t *testing.T) {
+	err := initForSynchronousTests()
+
+	if err != nil {
+		t.Error("error initializing database", err)
+	}
+
+	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+
+	if err != nil {
+		t.Error("error making new forest", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing forest to disk")
+	}
+
+	forestList, err := GetForests() //could have used meta version, but there
+	//would have been an extra step to extract the forest
+	forest := forestList[0]
+
+	if err != nil {
+		t.Error("error getting forests from disk", err)
+	}
+
+	err = NewTree(forest, convertNumToUpdater(3), convertNumToUpdater(4))
+
+
+	if err != nil {
+		t.Error("error making new tree", err)
+	}
+
+	err = NewBranch(forest, convertNumToUpdater(5), convertNumToUpdater(6))
+
+	if err != nil {
+		t.Error("error making new branch", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing forest children", err)
+	}
+
+	forestChildren, err := GetChildren(forest.Record)
+
+	if err != nil {
+		t.Error("error getting forest children", err)
+	}
+
+	var tree Node
+	var branch Node
+
+	for _, v := range forestChildren {
+		if v.Data == convertNumToUpdater(4) {
+			tree = v
+		} else if v.Data == convertNumToUpdater(6) {
+			branch = v
+		}
+	}
+
+	err = NewBranch(tree, convertNumToUpdater(7), convertNumToUpdater(8))
+
+	if err != nil {
+		t.Error("error making tree branch", err)
+	}
+
+	err = NewBranch(branch, convertNumToUpdater(9), convertNumToUpdater(10))
+
+	if err != nil {
+		t.Error("error making branch branch", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing branches", err)
+	}
+
+	forest, err = Get(forest.Record)
+
+	if err != nil {
+		t.Error("error getting forest")
+	}
+
+	tree, err = Get(tree.Record)
+
+	if err != nil {
+		t.Error("error getting updated tree")
+	}
+
+	treeChildList, err := GetChildren(tree)
+
+	if err != nil {
+		t.Error("error getting tree child")
+	}
+	treeChild := treeChildList[0]
+
+	branch, err = Get(branch.Record)
+
+	branchChildList, err := GetChildren(branch)
+
+	if err != nil {
+		t.Error("error getting branch child")
+	}
+	branchChild := branchChildList[0]
+
+	if !forest.Children[branch.KeyString()].Loc.equals(branch.Loc) {
+		t.Error("forest has incorrect child data")
+	}
+
+	if !branch.Parent.Loc.equals(forest.Loc) {
+		t.Error("parent branch has incorrect parent data")
+	}
+
+	if !tree.Children[treeChild.KeyString()].Loc.equals(treeChild.Loc) {
+		t.Error("tree has incorrect child data")
+	}
+
+	if !treeChild.Parent.Loc.equals(tree.Loc) {
+		t.Error("tree child has incorrect parent data")
+	}
+
+	if !branch.Children[branchChild.KeyString()].Loc.equals(branchChild.Loc) {
+		t.Error("parent branch has incorrect child data")
+	}
+
+	if !branchChild.Parent.Loc.equals(branch.Loc) {
+		t.Error("branch child has incorrect parent data")
+	}
+
+}
