@@ -412,21 +412,34 @@ func GetForests() ([]Node, error) {
 //update to take place (or for any updates to ever take place again).  It is
 //intended for updates only.  If you want to do insertions use the new
 //functions and if you only need to read, then use the get functions.
-func OpenUpdate(l locateable) (Node, error) {
+//note that changing the child and parent meta data on one node does not
+//automatically change the corresponding data on the parent or child node.
+//DO NOT MODIFY LOCATIONS.  if you do, you may end up with duplicates on the 
+//db.
+//Eventually I'll set it up to only lock individual nodes and only put a read
+//lock on the funnel, but for now this sets up the api and general
+//functionality.
+func OpenUpdate(ls ...locateable) ([]Node, error) {
 	funnel.mutex.Lock()
 
-	updateableNode, err := getNodeIntoFunnel(l)
+	updateableNodes := make([]Node, len(ls))
 
-	if err != nil {
-		fmt.Println("error getting updateable Node", err)
-		return updateableNode, err
+	for i, l := range ls {
+		updateableNode, err := getNodeIntoFunnel(l)
+		if err != nil {
+			fmt.Println("error getting updateable Node", err)
+			return updateableNodes, err
+		}
+		updateableNodes[i] = updateableNode
 	}
 
-	return updateableNode, nil
+	return updateableNodes, nil
 }
 
-func CloseUpdate(updatedNode Node){
-	funnel.nodes[updatedNode.KeyString()] = updatedNode
+func CloseUpdate(updatedNodes ...Node){
+	for _, n := range updatedNodes {
+		funnel.nodes[n.KeyString()] = n
+	}
 
 	funnel.mutex.Unlock()
 }
