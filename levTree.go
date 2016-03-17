@@ -79,11 +79,11 @@ import (
 	"time"
 )
 
-//Should be run (and finish running) before any other operations on the db.
-//Don't forget to register any types that you're storing using non-primitive
-//types with gob.
+// Should be run (and finish running) before any other operations on the db.
+// Don't forget to register any types that you're storing using non-primitive
+// types with gob.
 
-//The only role of root record is to allow the look up of the root Node.
+// The only role of root record is to allow the look up of the root Node.
 var rootRecord Record = Record{
 	Loc: noNameSpace,
 }
@@ -105,9 +105,9 @@ func InitDb(path string, writeInterval time.Duration) error {
 	return nil
 }
 
-//a forest is a tree attached to the root Node whose key is the namespace for
-//all of it's children.  Modifications to the returned forest cannot be
-//persisted.
+// a forest is a tree attached to the root Node whose key is the namespace for
+// all of it's children.  Modifications to the returned forest cannot be
+// persisted.
 func NewForest(metaData updater, data updater) error {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
@@ -132,9 +132,9 @@ func NewForest(metaData updater, data updater) error {
 	return nil
 }
 
-//Creates a child of the calling tree or forest in that tree's namespace, whose
-//key is the namespace for all of it's children.  Modifications to the returned
-//tree cannot be persisted.
+// Creates a child of the calling tree or forest in that tree's namespace, whose
+// key is the namespace for all of it's children.  Modifications to the returned
+// tree cannot be persisted.
 func NewTree(parent locateable, metaData updater, data updater) error {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
@@ -159,10 +159,10 @@ func NewTree(parent locateable, metaData updater, data updater) error {
 	return err
 }
 
-//Makes and persists (eventually) a child Node of the calling Node and updates
-//the calling Node's children.  It doesn't return anything, because you won't
-//be able to access it on the db until the funnel flushes. Modifications to the
-//returned forest cannot be persisted.
+// Makes and persists (eventually) a child Node of the calling Node and updates
+// the calling Node's children.  It doesn't return anything, because you won't
+// be able to access it on the db until the funnel flushes. Modifications to the
+// returned forest cannot be persisted.
 func NewBranch(parent locateable, metaData updater, data updater) error {
 	funnel.mutex.Lock()
 	defer funnel.mutex.Unlock()
@@ -187,110 +187,14 @@ func NewBranch(parent locateable, metaData updater, data updater) error {
 	return nil
 }
 
-//Updates the Node's internal data by calling .Update on the Node's Data
-//property and persisting the change to the server (eventually).
-//it doesn't return the updated Node because that Node will not reflect the
-//version of the Node that is on the db
-func UpdateNodeData(l locateable, u updateData) error {
-	funnel.mutex.Lock()
-	defer funnel.mutex.Unlock()
-
-	updatedNode, err := getNodeIntoFunnel(l)
-
-	if err != nil {
-		fmt.Println("error getting updateable Node", err)
-		return err
-	}
-
-	updatedNode.Record, err = updatedNode.Update(u)
-
-	if err != nil {
-		fmt.Println("error updating Node", err)
-		return err
-	}
-
-	funnel.nodes[updatedNode.KeyString()] = updatedNode
-
-	return nil
-}
-
-//Updates the Node's parent metaRecord and the Node's parent's child metaRecord
-//for this Node by calling .Update on both of these metaRecords and persisting
-//the change to the server (eventually)
-//it doesn't return the updated Record because that Node will not reflect the
-//version of the Node that is on the db
-func updateParentMeta(child locateable, u updateData) error {
-	funnel.mutex.Lock()
-	defer funnel.mutex.Unlock()
-
-	childNode, err := getNodeIntoFunnel(child)
-
-	if err != nil {
-		fmt.Println("error getting updateable child", err)
-		return err
-	}
-
-	parentNode, err := getNodeIntoFunnel(childNode.Parent)
-
-	if err != nil {
-		fmt.Println("error getting updateable parent", err)
-		return err
-	}
-
-	err = updateConnectionMeta(parentNode, childNode, u)
-
-	if err != nil {
-		fmt.Println("Error updating meta data")
-		return err
-	}
-
-	funnel.nodes[childNode.KeyString()] = childNode
-	funnel.nodes[parentNode.KeyString()] = parentNode
-
-	return nil
-}
-
-//Updates the Node's child metaRecord and the Node's child's parent metaRecord
-//for this Node by calling .Update on both of these metaRecords and persisting
-//the change to the server (eventually).
-//it doesn't return the updated Record because that Node will not reflect the
-//version of the Node that is on the db
-func updateChildMeta(parent locateable, child locateable, u updateData) error {
-	funnel.mutex.Lock()
-	defer funnel.mutex.Unlock()
-
-	parentNode, err := getNodeIntoFunnel(parent)
-
-	if err != nil {
-		fmt.Println("error getting updateable parent", err)
-		return err
-	}
-
-	childNode, err := getNodeIntoFunnel(child)
-
-	if err != nil {
-		fmt.Println("error getting updateable child", err)
-		return err
-	}
-
-	err = updateConnectionMeta(parentNode, childNode, u)
-
-	if err != nil {
-		fmt.Println("Error updating meta data")
-		return err
-	}
-
-	return nil
-}
-
-//Gets the Node which the locateable describes (for instance, if called on a
-//childmetaRecord, gets the actual child Node).
-//Note that if you pass in a Node it will return the Node unchanged without
-//looking it up in the database.  This is meant to ensure that within a thread,
-//it's harder to have two copies of any given entry in the db.  if you want to
-//bypass this behavior then you can pass in the Node's Record field instead of
-//the Node.  This workaround should be used sparingly so that you don't run
-//into consistency errors and avoid making more database queries than you need.
+// Gets the Node which the locateable describes (for instance, if called on a
+// childmetaRecord, gets the actual child Node).
+// Note that if you pass in a Node it will return the Node unchanged without
+// looking it up in the database.  This is meant to ensure that within a thread,
+// it's harder to have two copies of any given entry in the db.  if you want to
+// bypass this behavior then you can pass in the Node's Record field instead of
+// the Node.  This workaround should be used sparingly so that you don't run
+// into consistency errors and avoid making more database queries than you need.
 func Get(l locateable) (Node, error) {
 	n, ok := l.(Node)
 	var err error
@@ -301,12 +205,12 @@ func Get(l locateable) (Node, error) {
 			return n, err
 		}
 	}
-	
+
 	return n, nil
 }
 
-//Gets the calling Node's parent metaRecord.  Modifications to the returned forests cannot be
-//persisted.
+// Gets the calling Node's parent metaRecord.  Modifications to the returned forests cannot be
+// persisted.
 func GetParentMeta(child locateable) (Record, error) {
 
 	n, err := Get(child)
@@ -319,8 +223,8 @@ func GetParentMeta(child locateable) (Record, error) {
 	return n.Parent, nil
 }
 
-//Gets the calling Node's parent.  Modifications to the returned Node cannot be
-//persisted.
+// Gets the calling Node's parent.  Modifications to the returned Node cannot be
+// persisted.
 func GetParent(child locateable) (Node, error) {
 	var parent Node
 	parentMeta, err := GetParentMeta(child)
@@ -340,8 +244,8 @@ func GetParent(child locateable) (Node, error) {
 	return parent, nil
 }
 
-//Gets the calling Node's children's metaRecords.  Modifications to the
-//returned Records cannot be persisted.
+// Gets the calling Node's children's metaRecords.  Modifications to the
+// returned Records cannot be persisted.
 func GetChildrenMeta(parent locateable) (map[string]Record, error) {
 	n, err := Get(parent)
 
@@ -353,12 +257,11 @@ func GetChildrenMeta(parent locateable) (map[string]Record, error) {
 	return n.Children, nil
 }
 
-//Gets all of the calling Node's children.  Generally it's better to use
-//the meta version And load a subset of children based on the meta data stored in
-//the Node.  Modifications to the returned nodes cannot be persisted.
+// Gets all of the calling Node's children.  Generally it's better to use
+// the meta version And load a subset of children based on the meta data stored in
+// the Node.  Modifications to the returned nodes cannot be persisted.
 func GetChildren(parent locateable) ([]Node, error) {
 	childrenMeta, err := GetChildrenMeta(parent)
-
 
 	if err != nil {
 		fmt.Println("error loading Node: ", err)
@@ -380,8 +283,8 @@ func GetChildren(parent locateable) ([]Node, error) {
 
 }
 
-//Gets all metaRecords for forests in the db.  Modifications to the returned
-//Records cannot be persisted.
+// Gets all metaRecords for forests in the db.  Modifications to the returned
+// Records cannot be persisted.
 func GetForestsMeta() (map[string]Record, error) {
 	forests, err := GetChildrenMeta(rootRecord)
 
@@ -393,9 +296,9 @@ func GetForestsMeta() (map[string]Record, error) {
 	return forests, nil
 }
 
-//Gets all forests in the db.  Generally it's better to use the meta version
-//And load a subset of forests based on the meta data stored in the root.
-//Modifications to the returned forests cannot be persisted.
+// Gets all forests in the db.  Generally it's better to use the meta version
+// And load a subset of forests based on the meta data stored in the root.
+// Modifications to the returned forests cannot be persisted.
 func GetForests() ([]Node, error) {
 	forests, err := GetChildren(rootRecord)
 
@@ -407,18 +310,18 @@ func GetForests() ([]Node, error) {
 	return forests, nil
 }
 
-//Returns the most up-to-date version of the node at the location l indicates.
-//This node can be updated, but must be passed into Close Update for that
-//update to take place (or for any updates to ever take place again).  It is
-//intended for updates only.  If you want to do insertions use the new
-//functions and if you only need to read, then use the get functions.
-//note that changing the child and parent meta data on one node does not
-//automatically change the corresponding data on the parent or child node.
-//DO NOT MODIFY LOCATIONS.  if you do, you may end up with duplicates on the 
-//db.
-//Eventually I'll set it up to only lock individual nodes and only put a read
-//lock on the funnel, but for now this sets up the api and general
-//functionality.
+// Returns the most up-to-date version of the node at the locations ls indicates.
+// These nodes can be updated, but must be passed into Close Update for thos
+// updates to take place (or for any updates to ever take place again).  It is
+// intended for updates only.  If you want to do insertions use the new
+// functions and if you only need to read, then use the get functions.
+// note that changing the child and parent meta data on one node does not
+// automatically change the corresponding data on the parent or child node.
+// DO NOT MODIFY LOCATIONS.  if you do, you may end up with duplicates on the
+// db.
+// Eventually I'll set it up to only lock individual nodes and only put a read
+// lock on the funnel, but for now this sets up the api and general
+// functionality.
 func OpenUpdate(ls ...locateable) ([]Node, error) {
 	funnel.mutex.Lock()
 
@@ -436,7 +339,7 @@ func OpenUpdate(ls ...locateable) ([]Node, error) {
 	return updateableNodes, nil
 }
 
-func CloseUpdate(updatedNodes ...Node){
+func CloseUpdate(updatedNodes ...Node) {
 	for _, n := range updatedNodes {
 		funnel.nodes[n.KeyString()] = n
 	}

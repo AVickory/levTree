@@ -2,13 +2,13 @@ package levTree
 
 import (
 	"fmt"
-	"testing"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
+	"testing"
 	"time"
 )
 
-func clearDb () error {
+func clearDb() error {
 	err := os.RemoveAll(dbPath)
 
 	if err != nil {
@@ -21,7 +21,7 @@ func clearDb () error {
 	return nil
 }
 
-func initForSynchronousTests () error {
+func initForSynchronousTests() error {
 	dbPath = "./data/db"
 
 	clearDb()
@@ -37,10 +37,10 @@ func initForSynchronousTests () error {
 }
 
 //I say sync, but what I actually mean is that this should not be used
-//concurrently in general. (technically it ought to be fine for create 
+//concurrently in general. (technically it ought to be fine for create
 //operations, but you could get some wackyness going on with concurrent
 //updates)
-func syncPut (n Node) error {
+func syncPut(n Node) error {
 	db, err := leveldb.OpenFile(dbPath, nil)
 	defer db.Close()
 
@@ -65,7 +65,7 @@ func syncPut (n Node) error {
 	return nil
 }
 
-func TestRootManipulation (t *testing.T) {
+func TestRootManipulation(t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
@@ -122,7 +122,7 @@ func TestRootManipulation (t *testing.T) {
 
 }
 
-func TestFunnel (t *testing.T) {
+func TestFunnel(t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
@@ -155,7 +155,7 @@ func TestFunnel (t *testing.T) {
 
 	if funnel.nodes[n2.KeyString()].Data == n2.Data {
 		//at some point I might have the funnel use pointers, but for the time
-		//being It's important to some of the logic that changes to the node 
+		//being It's important to some of the logic that changes to the node
 		//returned by getNodeIntoFunnel not change the copy of the node that is
 		//in the funnel.
 		t.Error("Changes to node should not change the copy in the funnel")
@@ -175,5 +175,3 @@ func TestFunnel (t *testing.T) {
 		t.Error("funnel did not save data!")
 	}
 }
-
-

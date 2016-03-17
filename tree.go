@@ -49,7 +49,7 @@ type updateData interface{}
 //Updates are assumed to be commutative.  Note that because of the interface
 //type of the argument, this method will have to coerce it's argument.
 type updater interface {
-	Update(updateData) (updater, error)
+	// Update(updateData) (updater, error)
 }
 
 //allows records and nodes to be handled by the same methods.  This ends up
@@ -59,8 +59,8 @@ type updater interface {
 type locateable interface {
 	Key() []byte
 	KeyString() string
-	Update(updateData) (Record, error)
-	GetData() updater
+	// Update(updateData) (Record, error)
+	// GetData() updater
 }
 
 //a Record describes a location in the db.
@@ -75,20 +75,19 @@ func (r Record) Key() []byte {
 func (r Record) KeyString() string {
 	return r.Loc.KeyString()
 }
-func (r Record) Update(u updateData) (Record, error) {
-	Data, err := r.Data.Update(u)
+// func (r Record) Update(u updateData) (Record, error) {
+// 	Data, err := r.Data.Update(u)
 
-	if err != nil {
-		fmt.Println("error updating record")
-		return r, err
-	}
-	r.Data = Data
-	return r, nil
-}
-func (r Record) GetData() updater {
-	return r.Data
-}
-
+// 	if err != nil {
+// 		fmt.Println("error updating record")
+// 		return r, err
+// 	}
+// 	r.Data = Data
+// 	return r, nil
+// }
+// func (r Record) GetData() updater {
+// 	return r.Data
+// }
 
 //one tree Node.  It is itself a Record and contains records, but it's
 //important to note that the Record objects in the parent and children fields
@@ -113,23 +112,23 @@ func (n Node) Key() []byte {
 func (n Node) KeyString() string {
 	return n.Record.KeyString()
 }
-func (n Node) Update(u updateData) (Record, error) {
+// func (n Node) Update(u updateData) (Record, error) {
 
-	r, err := n.Record.Update(u)
-	n.Record = r
-	if err != nil {
-		return n.Record, err
-	}
-	return n.Record, nil
-}
-func (n Node) GetData() updater {
-	return n.Record.GetData()
-}
+// 	r, err := n.Record.Update(u)
+// 	n.Record = r
+// 	if err != nil {
+// 		return n.Record, err
+// 	}
+// 	return n.Record, nil
+// }
+// func (n Node) GetData() updater {
+// 	return n.Record.GetData()
+// }
 
 func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) {
-	if parent.Children == nil {
-		parent.Children = make(map[string]Record)
-	}
+	// if parent.Children == nil {
+	// 	parent.Children = make(map[string]Record)
+	// }
 
 	parent.Children[child.Loc.KeyString()] = Record{
 		Loc:  child.Loc,
@@ -140,30 +139,6 @@ func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) 
 		Data: metaData,
 	}
 	return parent, child
-}
-
-//Updates the parent metaData for the child Node and the child metaData for the parent Node.
-func updateConnectionMeta(parent Node, child Node, u updateData) error {
-
-	parentMeta, err := child.Parent.Update(u)
-	child.Parent = parentMeta
-	if err != nil {
-		fmt.Println("error getting updating child Node's parent", err)
-		return err
-	}
-
-	childMeta := parent.Children[child.KeyString()]
-
-	childMeta.Data = parentMeta.Data
-
-	parent.Children[child.KeyString()] = childMeta
-
-	if err != nil {
-		fmt.Println("error getting updating child Node's parent", err)
-		return err
-	}
-
-	return err
 }
 
 //Creates a Node whose children will be in the same namespace as this branch.
@@ -208,19 +183,19 @@ func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
 	return parent, newTree, nil
 }
 
-func (n Node) IsTree() bool {
-	//branch nodes put their children in the same bucket that they are in while
-	//trees put their children in a different bucket (currently tree children
-	//have their namespace set to the id of the tree Node, but this may change
-	//in the future when I start optimizing for sequential reads through trees)
-	return !n.Record.Loc.getBucketLocation().equals(n.ChildBucket)
-}
+//branch nodes put their children in the same bucket that they are in while
+//trees put their children in a different bucket (currently tree children
+//have their namespace set to the id of the tree Node, but this may change
+//in the future when I start optimizing for sequential reads through trees)
+// func (n Node) IsTree() bool {
+// 	return !n.Record.Loc.getBucketLocation().equals(n.ChildBucket)
+// }
 
 //creates a tree at height 0 attached to the root.  root should be the root of the db.  You could,
 //but shouldn't, pass any other Node to this function
 func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
 	root, newForest, err := makeTree(root, metaData, data)
-	
+
 	if err != nil {
 		fmt.Println("Error creating template tree: ", err)
 		return root, newForest, err
@@ -231,12 +206,12 @@ func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
 	return root, newForest, nil
 }
 
-func (n Node) IsForest() bool {
-	//the only special characteristic of a forest is that it's Height is 0.
-	//it's worth noting that this will return true for the root as well as
-	//forests.
-	return n.Height == 0 && n.IsTree()
-}
+//the only special characteristic of a forest is that it's Height is 0.
+//it's worth noting that this will return true for the root as well as
+//forests.
+// func (n Node) IsForest() bool {
+// 	return n.Height == 0 && n.IsTree()
+// }
 
 func makeRoot() Node {
 	return Node{

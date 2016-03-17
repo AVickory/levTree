@@ -1,9 +1,9 @@
 package levTree
 
 import (
-	"testing"
-	"fmt"
 	"encoding/gob"
+	"fmt"
+	"testing"
 )
 
 type mockUpdateable int
@@ -270,8 +270,7 @@ func TestMakeBranchOnBranch(t *testing.T) {
 	testBranch(t, branch1, branch2, metaDataBranch2, dataBranch2)
 }
 
-
-func testNodeEquality (n1 Node, n2 Node) bool {
+func testNodeEquality(n1 Node, n2 Node) bool {
 	tests := []bool{
 		n1.Record.Data == n2.Record.Data,
 		n1.Record.Loc.equals(n2.Record.Loc),
@@ -306,7 +305,7 @@ func testRecordListEquality(rs1, rs2 map[string]Record) bool {
 	return true
 }
 
-func serializeDeserializeTest (t *testing.T, n Node) {
+func serializeDeserializeTest(t *testing.T, n Node) {
 	gobble, err := serialize(n)
 	if err != nil {
 		t.Error("SERIALIZE ERROR")
@@ -327,7 +326,7 @@ func convertNumToUpdater(x int) updater {
 	return u
 }
 
-func TestSerializeDeSerialize (t *testing.T) {
+func TestSerializeDeSerialize(t *testing.T) {
 	root := makeRoot()
 	root, forest, err := makeForest(root, convertNumToUpdater(-1), convertNumToUpdater(0))
 	if err != nil {

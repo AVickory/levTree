@@ -1,11 +1,11 @@
 package levTree
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
-func TestForest (t *testing.T) {
+func TestForest(t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
@@ -81,29 +81,29 @@ func TestForest (t *testing.T) {
 
 }
 
-		// err = UpdateNodeData(n, 1)
+// err = UpdateNodeData(n, 1)
 
-		// if err != nil {
-		// 	t.Error("error updating funnel node", err)
-		// }
+// if err != nil {
+// 	t.Error("error updating funnel node", err)
+// }
 
-		// err = clearFunnel()
+// err = clearFunnel()
 
-		// if err != nil {
-		// 	t.Error("error writing node to disk", err)
-		// }
+// if err != nil {
+// 	t.Error("error writing node to disk", err)
+// }
 
-		// updatedN, err := Get(n.Record)
+// updatedN, err := Get(n.Record)
 
-		// if err != nil {
-		// 	t.Error("error getting node from disk", err)
-		// }
+// if err != nil {
+// 	t.Error("error getting node from disk", err)
+// }
 
-		// if updatedN.Data == n.Data {
-		// 	t.Error("error updating forest data")
-		// }
+// if updatedN.Data == n.Data {
+// 	t.Error("error updating forest data")
+// }
 
-func TestNewTree (t *testing.T) {
+func TestNewTree(t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
@@ -154,7 +154,7 @@ func TestNewTree (t *testing.T) {
 	//because opening a transaction when one is open causes an error instead of
 	//blocking, so sequential transactions can't really be done concurrently.
 	//  This method of getting updated records immediately to and then from the
-	//db is only meant for testing and if initDb has been called then it can 
+	//db is only meant for testing and if initDb has been called then it can
 	//cause errors that are not easily caught both in your code and in the
 	//funnel.
 	//getForests and getForestsMeta always use this syntax (without
@@ -242,10 +242,7 @@ func TestNewTree (t *testing.T) {
 
 }
 
-
-
-
-func TestNewBranch (t *testing.T) {
+func TestNewBranch(t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
@@ -273,7 +270,6 @@ func TestNewBranch (t *testing.T) {
 	}
 
 	err = NewTree(forest, convertNumToUpdater(3), convertNumToUpdater(4))
-
 
 	if err != nil {
 		t.Error("error making new tree", err)
@@ -380,6 +376,72 @@ func TestNewBranch (t *testing.T) {
 
 }
 
+//used Get and Get children in the TestNew functions.  so just these two get
+//their own test function.
+func TestGetParent (t *testing.T) {
+	err := initForSynchronousTests()
 
+	if err != nil {
+		t.Error("error initializing database", err)
+	}
 
+	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
 
+	if err != nil {
+		t.Error("error making new forest", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing forest to disk")
+	}
+
+	forestList, err := GetForests() //could have used meta version, but there
+	//would have been an extra step to extract the forest
+	forest := forestList[0]
+
+	if err != nil {
+		t.Error("error getting forests from disk", err)
+	}
+
+	err = NewBranch(forest, convertNumToUpdater(3), convertNumToUpdater(4))
+
+	if err != nil {
+		t.Error("error making new branch", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing branch to disk", err)
+	}
+
+	branchList, err := GetChildren(forest.Record)
+
+	if err != nil {
+		t.Error("error getting branch from disk", err)
+	}
+	branch := branchList[0]
+
+	updatedForestMeta, err := GetParentMeta(branch.Record)
+
+	if err != nil {
+		t.Error("error getting forest metadata from disk", err)
+	}
+
+	if updatedForestMeta.Data != convertNumToUpdater(3) {
+		t.Error("got wrong metadata")
+	}
+
+	updatedForest, err := GetParent(branch.Record)
+
+	if err != nil {
+		t.Error("error reloading forest", err)
+	}
+
+	if updatedForest.Data != convertNumToUpdater(2) {
+		t.Error("parent node's data is wrong")
+	}
+
+}

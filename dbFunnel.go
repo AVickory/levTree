@@ -18,12 +18,12 @@ have to compete for access.  When an update is called for an Node that is in
 the funnel that update will be applied to that copy of the Node in the funnel.
 */
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"time"
-	"bytes"
-	"encoding/gob"
 )
 
 //goleveldb transactions throw errors when a transaction is already open
