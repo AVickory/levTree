@@ -16,17 +16,21 @@ func clearDb() error {
 		return err
 	}
 
-	waitBetweenWrites = 10 * time.Millisecond
-
 	return nil
 }
 
 func initForSynchronousTests() error {
 	dbPath = "./data/db"
+	waitBetweenWrites = 10 * time.Millisecond
 
-	clearDb()
+	err := clearDb()
 
-	err := initializeRoot()
+	if err != nil {
+		fmt.Println("error clearing db: ", err)
+		return err
+	}
+
+	err = initializeRoot()
 
 	if err != nil {
 		fmt.Println("database could not be initialized: ", err)

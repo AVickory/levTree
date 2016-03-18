@@ -3,6 +3,7 @@ package levTree
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestForest(t *testing.T) {
@@ -442,6 +443,106 @@ func TestGetParent (t *testing.T) {
 
 	if updatedForest.Data != convertNumToUpdater(2) {
 		t.Error("parent node's data is wrong")
+	}
+
+}
+
+func TestUpdate (t *testing.T) {
+	err := initForSynchronousTests()
+
+	if err != nil {
+		t.Error("error initializing db", err)
+	}
+
+	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+
+	if err != nil {
+		t.Error("error putting forest in funnel", err)
+	}
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing forest to disk")
+	}
+
+	forestList, err := GetForests()
+
+	if err != nil {
+		t.Error("error getting forest")
+	}
+	forest := forestList[0]
+
+	nodes, err := OpenUpdate(forest)
+
+	if err != nil {
+		t.Error("error getting node into funnel for update: ", err)
+	}
+	n := nodes[0]
+	if n.Data != convertNumToUpdater(2) {
+		t.Error("node data was incorrect")
+	}
+	if n.Parent.Data != convertNumToUpdater(1) {
+		t.Error("node's parent metadata was incorrect")
+	}
+
+	n.Data = convertNumToUpdater(3)
+
+	CloseUpdate(n)
+
+	err = clearFunnel()
+
+	if err != nil {
+		t.Error("error writing updated node to disk", err)
+	}
+
+	forestList, err = GetForests()
+
+	if err != nil {
+		t.Error("error getting forest", err)
+	}
+	updatedForest := forestList[0];
+
+
+	if updatedForest.Data != convertNumToUpdater(3) {
+		t.Error("updated data not saved to disk")
+	}
+
+	if updatedForest.Parent.Data != convertNumToUpdater(1) {
+		t.Error("unchanged data in the updated node has been altered")
+	}
+}
+
+func TestAsync (t *testing.T) {
+	err := clearDb()
+
+	if err != nil {
+		t.Error("error clearing db: ", err)
+	}
+
+	err = InitDb("./data/db", 10 * time.Millisecond)
+
+	if err != nil {
+		t.Error("error initializing db: ", err)
+	}
+
+	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+
+	if err != nil {
+		t.Error("error making new forest", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	forestList, err := GetForests()
+
+	if err != nil {
+		t.Error("error getting forest", err)
+	}
+	forest := forestList[0]
+
+	if forest.Data != convertNumToUpdater(2) {
+		t.Error("forest not saved correctly")
 	}
 
 }
