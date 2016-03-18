@@ -2,11 +2,8 @@ LevTree
 
 An eventually consistent tree database implemented on top of leveldb.
 
-There's a lot of work left to go, between some API concerns (the update
-interface is really cumbersome) and a lot of areas for performance 
-improvements (I really don't take advantage of leveldb's sequential seek
-capabilities).  Plans are in the works for both of these, in addition to a
-test suite (which is the next thing on my backlog)
+There's a lot of work left to go, I really don't take advantage of leveldb's
+//sequential seek capabilities.  Plans are in the works.
 
 Oh, and a proper README.  For now, if you'd like to check out the api you'll
 have to use the comments or use godoc (Manually, I'll go get it hosted once
@@ -71,5 +68,5 @@ the funnel that update will be applied to that copy of the node in the funnel.
 location.go
 
 The Location module provides a bucketing system for namespacing keys.  id 
-generation defaults to guuid V4, which is sufficient for my usecase, but other
+generation uses guuid V4, which is sufficient for my usecase, but other
 options may be added later.
