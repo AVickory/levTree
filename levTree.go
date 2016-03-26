@@ -77,6 +77,7 @@ package levTree
 import (
 	"fmt"
 	"time"
+	"github.com/AVickory/levTree/keyChain"
 )
 
 // Should be run (and finish running) before any other operations on the db.
@@ -85,7 +86,7 @@ import (
 
 // The only role of root record is to allow the look up of the root Node.
 var rootRecord Record = Record{
-	Loc: noNameSpace,
+	Loc: keyChain.Root,
 }
 
 func InitDb(path string, writeInterval time.Duration) error {

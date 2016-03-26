@@ -40,6 +40,7 @@ can instead put identifying data in the root's child metadata records.
 
 import (
 	"fmt"
+	"github.com/AVickory/levTree/keyChain"
 )
 
 //this type is just a lexical device to make it clear when an argument
@@ -65,7 +66,7 @@ type locateable interface {
 
 //a Record describes a location in the db.
 type Record struct {
-	Loc  location
+	Loc  keyChain.KeyChain
 	Data updater
 }
 
@@ -98,11 +99,8 @@ func (r Record) KeyString() string {
 type Node struct {
 	Record
 
-	Height int
-
 	Parent Record
 
-	ChildBucket location
 	Children    map[string]Record //maps child locations to indices in children slice
 }
 
@@ -130,7 +128,7 @@ func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) 
 	// 	parent.Children = make(map[string]Record)
 	// }
 
-	parent.Children[child.Loc.KeyString()] = Record{
+	parent.Children[child.KeyString()] = Record{
 		Loc:  child.Loc,
 		Data: metaData,
 	}
@@ -144,9 +142,8 @@ func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) 
 //Creates a Node whose children will be in the same namespace as this branch.
 func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error) {
 	var newBranch Node
-	bucket := parent.ChildBucket
 
-	loc, err := bucket.getNewLoc()
+	loc, err := keyChain.MakeBranchKeyChain(parent.Loc)
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
@@ -158,8 +155,6 @@ func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error)
 			Loc:  loc,
 			Data: data,
 		},
-		Height:      parent.Height + 1,
-		ChildBucket: bucket,
 		Children:    make(map[string]Record),
 	}
 
@@ -171,14 +166,24 @@ func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error)
 //creates a branch of the parent Node who's children will be in a different
 //namespace than the new branch
 func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
-	parent, newTree, err := makeBranch(parent, metaData, data)
+	var newTree Node
+
+	loc, err := keyChain.MakeTreeKeyChain(parent.Loc)
 
 	if err != nil {
-		fmt.Println("Error creating template branch: ", err)
+		fmt.Println("error getting new location", err)
 		return parent, newTree, err
 	}
 
-	newTree.ChildBucket = newTree.Record.Loc
+	newTree = Node{
+		Record: Record{
+			Loc:  loc,
+			Data: data,
+		},
+		Children:    make(map[string]Record),
+	}
+
+	parent, newTree = joinParentAndChild(parent, newTree, metaData)
 
 	return parent, newTree, nil
 }
@@ -201,8 +206,6 @@ func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
 		return root, newForest, err
 	}
 
-	newForest.Height = 0
-
 	return root, newForest, nil
 }
 
@@ -216,9 +219,11 @@ func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
 func makeRoot() Node {
 	return Node{
 		Record: Record{
-			Loc: noNameSpace,
+			Loc: keyChain.Root,
 		},
-		ChildBucket: noNameSpace,
+		Parent: Record{
+			Loc: keyChain.Root,
+		},
 		Children:    make(map[string]Record),
 	}
 }

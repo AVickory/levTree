@@ -10,9 +10,9 @@ import (
 	"fmt"
 )
 
-type loc []Id
+type Loc []Id
 
-func makeBranchLoc (bucket loc, parent loc) (loc, error) {
+func makeBranchLoc (bucket Loc, parent Loc) (Loc, error) {
 	length := len(bucket) + 2
 
 	loc := make([]Id, length)
@@ -32,7 +32,7 @@ func makeBranchLoc (bucket loc, parent loc) (loc, error) {
 	return loc, nil
 }
 
-func makeTreeLoc (bucket loc) (loc, error) {
+func makeTreeLoc (bucket Loc) (Loc, error) {
 	bucketId := bucket.GetId()
 
 	if bucketId.Identifier == nil || len(bucketId.Identifier) == 0{
@@ -43,7 +43,7 @@ func makeTreeLoc (bucket loc) (loc, error) {
 
 	if err != nil {
 		fmt.Println("Error making Id", err)
-		return loc{}, err
+		return Loc{}, err
 	}
 
 	bucket = append(bucket, id)
@@ -51,21 +51,21 @@ func makeTreeLoc (bucket loc) (loc, error) {
 	return bucket, nil
 } 
 
-func (loc loc) Key() []byte {
-	key := make([]byte, 0, len(loc)*8)
+func (Loc Loc) Key() []byte {
+	key := make([]byte, 0, len(Loc)*8)
 
-	for _, id := range loc {
+	for _, id := range Loc {
 		key = append(key, id.Key()...)
 	}
 
 	return key
 }
 
-func (loc loc) KeyString() string {
+func (loc Loc) KeyString() string {
 	return string(loc.Key())
 }
 
-func (loc loc) GetId () Id {
+func (loc Loc) GetId () Id {
 	if(len(loc) != 0) {
 		return loc[len(loc) - 1]
 	} else {
@@ -73,7 +73,7 @@ func (loc loc) GetId () Id {
 	}
 }
 
-func (loc1 loc) Equal (loc2 loc) bool {
+func (loc1 Loc) Equal (loc2 Loc) bool {
 	if len(loc1) != len(loc2) {
 		return false
 	}
@@ -85,4 +85,8 @@ func (loc1 loc) Equal (loc2 loc) bool {
 	}
 
 	return true
+}
+
+func (loc Loc) Height() uint64 {
+	return loc.GetId().Height
 }

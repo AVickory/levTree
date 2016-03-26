@@ -24,6 +24,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"time"
+	"github.com/AVickory/levTree/keyChain"
 )
 
 //goleveldb transactions throw errors when a transaction is already open
@@ -46,7 +47,9 @@ var dbPath string
 //deserializing to or from the db.
 func init() {
 	funnel.nodes = make(map[string]Node)
-	gob.Register(location{})
+	gob.Register(keyChain.KeyChain{})
+	gob.Register(keyChain.Id{})
+	gob.Register(keyChain.Loc{})
 	gob.Register(Record{})
 	gob.Register(Node{})
 }

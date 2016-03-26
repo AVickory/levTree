@@ -213,31 +213,31 @@ func TestNewTree(t *testing.T) {
 
 	childTree := tempTreeList[0]
 
-	if !forest.Loc.equals(updatedParentTree.Parent.Loc) {
+	if !forest.Loc.Equal(updatedParentTree.Parent.Loc) {
 		t.Error("parent tree's parent is not forest")
 	}
 
-	if !forest.Children[updatedParentTree.KeyString()].Loc.equals(updatedParentTree.Loc) {
+	if !forest.Children[updatedParentTree.KeyString()].Loc.Equal(updatedParentTree.Loc) {
 		t.Error("forest does not have parent tree as child")
 	}
 
-	if !forest.Loc.equals(notParentTree.Parent.Loc) {
+	if !forest.Loc.Equal(notParentTree.Parent.Loc) {
 		t.Error("parent tree's parent is not forest")
 	}
 
-	if !forest.Children[notParentTree.KeyString()].Loc.equals(notParentTree.Loc) {
+	if !forest.Children[notParentTree.KeyString()].Loc.Equal(notParentTree.Loc) {
 		t.Error("forest does not have parent tree as child")
 	}
 
-	if !childTree.Parent.Loc.equals(updatedParentTree.Loc) {
+	if !childTree.Parent.Loc.Equal(updatedParentTree.Loc) {
 		t.Error("child does not have the right data for it's parent")
 	}
 
-	if !updatedParentTree.Children[childTree.KeyString()].Loc.equals(childTree.Loc) {
+	if !updatedParentTree.Children[childTree.KeyString()].Loc.Equal(childTree.Loc) {
 		t.Error("parent does not have right data for child")
 	}
 
-	if !updatedParentTree.Children[childTree.KeyString()].Loc.equals(childTree.Loc) {
+	if !updatedParentTree.Children[childTree.KeyString()].Loc.Equal(childTree.Loc) {
 		t.Error("parent does not have the right data for it's child")
 	}
 
@@ -351,27 +351,27 @@ func TestNewBranch(t *testing.T) {
 	}
 	branchChild := branchChildList[0]
 
-	if !forest.Children[branch.KeyString()].Loc.equals(branch.Loc) {
+	if !forest.Children[branch.KeyString()].Loc.Equal(branch.Loc) {
 		t.Error("forest has incorrect child data")
 	}
 
-	if !branch.Parent.Loc.equals(forest.Loc) {
+	if !branch.Parent.Loc.Equal(forest.Loc) {
 		t.Error("parent branch has incorrect parent data")
 	}
 
-	if !tree.Children[treeChild.KeyString()].Loc.equals(treeChild.Loc) {
+	if !tree.Children[treeChild.KeyString()].Loc.Equal(treeChild.Loc) {
 		t.Error("tree has incorrect child data")
 	}
 
-	if !treeChild.Parent.Loc.equals(tree.Loc) {
+	if !treeChild.Parent.Loc.Equal(tree.Loc) {
 		t.Error("tree child has incorrect parent data")
 	}
 
-	if !branch.Children[branchChild.KeyString()].Loc.equals(branchChild.Loc) {
+	if !branch.Children[branchChild.KeyString()].Loc.Equal(branchChild.Loc) {
 		t.Error("parent branch has incorrect child data")
 	}
 
-	if !branchChild.Parent.Loc.equals(branch.Loc) {
+	if !branchChild.Parent.Loc.Equal(branch.Loc) {
 		t.Error("branch child has incorrect parent data")
 	}
 

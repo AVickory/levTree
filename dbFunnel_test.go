@@ -82,7 +82,7 @@ func TestRootManipulation(t *testing.T) {
 		t.Error("error getting root Node", err)
 	}
 
-	if !n.Record.Loc.equals(rootRecord.Loc) {
+	if !n.Record.Loc.Equal(rootRecord.Loc) {
 		t.Error("rootRecord was not saved with correct location")
 	}
 
@@ -90,7 +90,7 @@ func TestRootManipulation(t *testing.T) {
 
 	err = syncPut(n)
 
-	if !n.Record.Loc.equals(rootRecord.Loc) {
+	if !n.Record.Loc.Equal(rootRecord.Loc) {
 		t.Error("error putting root Node back in db", err)
 	}
 

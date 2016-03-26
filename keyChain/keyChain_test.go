@@ -6,7 +6,7 @@ import (
 )
 
 func TestMakeTreeKeyChainRoot (t *testing.T) {
-	tree, err := MakeTreeKeyChain(rootKeyChain)
+	tree, err := MakeTreeKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making tree: ", err)
@@ -35,7 +35,7 @@ func TestMakeTreeKeyChainRoot (t *testing.T) {
 }
 
 func TestMakeTreeKeyChainOnTree (t *testing.T) {
-	parent, err := MakeTreeKeyChain(rootKeyChain)
+	parent, err := MakeTreeKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making parent: ", err)
@@ -69,7 +69,7 @@ func TestMakeTreeKeyChainOnTree (t *testing.T) {
 }
 
 func TestMakeBranchKeyChainRoot (t *testing.T) {
-	branch, err := MakeBranchKeyChain(rootKeyChain)
+	branch, err := MakeBranchKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making branch: ", err)
@@ -94,7 +94,7 @@ func TestMakeBranchKeyChainRoot (t *testing.T) {
 }
 
 func TestMakeBranchKeyChainOnTree (t *testing.T) {
-	parent, err := MakeTreeKeyChain(rootKeyChain)
+	parent, err := MakeTreeKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making parent: ", err)
@@ -129,7 +129,7 @@ func TestMakeBranchKeyChainOnTree (t *testing.T) {
 }
 
 func TestMakeBranchKeyChainOnBranch (t *testing.T) {
-	parent, err := MakeBranchKeyChain(rootKeyChain)
+	parent, err := MakeBranchKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making branch")
@@ -164,7 +164,7 @@ func TestMakeBranchKeyChainOnBranch (t *testing.T) {
 }
 
 func TestIsTree (t *testing.T) {
-	tree, err := MakeTreeKeyChain(rootKeyChain)
+	tree, err := MakeTreeKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making tree: ", err)
@@ -176,7 +176,7 @@ func TestIsTree (t *testing.T) {
 		t.Error("tree is not a tree: ", tree)
 	}
 
-	branch, err := MakeBranchKeyChain(rootKeyChain)
+	branch, err := MakeBranchKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making branch: ", err)
@@ -191,7 +191,7 @@ func TestIsTree (t *testing.T) {
 }
 
 func TestPassThroughFunctions (t *testing.T) {
-	parent, err := MakeTreeKeyChain(rootKeyChain)
+	parent, err := MakeTreeKeyChain(Root)
 
 	if err != nil {
 		t.Error("error making parent: ", err)
