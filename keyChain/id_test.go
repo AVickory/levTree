@@ -3,7 +3,6 @@ package keyChain
 import (
 	"testing"
 	"bytes"
-	"fmt"
 )
 
 func TestMakeId (t *testing.T) {
@@ -43,7 +42,7 @@ func TestMakeId (t *testing.T) {
 }
 
 func TestHeightToByteSlice (t *testing.T) {
-	i, err := makeId(257)
+	i, err := makeId(bitwiseConverters[0] | bitwiseConverters[5] | bitwiseConverters[7])
 	
 	if err != nil {
 		t.Error("error makeing Id: ", err)
@@ -51,23 +50,23 @@ func TestHeightToByteSlice (t *testing.T) {
 
 	var byteSlice []byte
 
-	byteSlice, err = i.heightToByteSlice()
-
-	if err != nil {
-		t.Error("error converting height to byte slice: ", err)
-	}
+	byteSlice = i.heightToByteSlice()
 
 	if len(byteSlice) != 8 {
 		t.Error("byte slice of 64 bit uint should have been 8 bits long, but was: ", len(byteSlice))
 	}
 
-	if byteSlice[len(byteSlice) - 1] != 1 || byteSlice[len(byteSlice) - 2] != 1 {
+	expected := []byte{
+		255, 0, 0, 0, 0, 255, 0, 255,
+	}
+
+	if !bytes.Equal(byteSlice, expected) {
 		t.Error("byteSlice is holding the wrong number: ", byteSlice)
 	}
+
 }
 
-
-func TestKey (t *testing.T) {
+func TestIdKey (t *testing.T) {
 	i1, err := makeId(257)
 
 	if err != nil {
@@ -80,31 +79,61 @@ func TestKey (t *testing.T) {
 		t.Error("error making Id: ", err)
 	}
 
-	h1, err := i1.heightToByteSlice()
+	h1 := i1.heightToByteSlice()
 
-	if err != nil {
-		t.Error("error converting height to byte slice: ", err)
-	}
+	k1 := i1.Key()
 
-	k1, err := i1.Key()
-
-	if err != nil {
-		t.Error("error converting id to key: ", err)
-	}
-
-	k2, err := i2.Key()
-
-	if err != nil {
-		t.Error("error converting id to key: ", err)
-	}
+	k2 := i2.Key()
 
 	if !bytes.Equal(h1, k1[:8]) {
-		t.Error("height was not stored correctly: ", k1[:8])
-		fmt.Println("should have been: ", h1)
+		t.Error("height was not stored correctly in key: ", k1[:8], "\n\tshould have been: ", h1)
 	}
 
 	if bytes.Equal(k1[8:], k2[8:]) {
 		t.Error("different ids' were the same!")
 	}
 
+}
+
+
+func TestMakeChildId (t *testing.T) {
+	i1, err := makeId(0)
+
+	if err != nil {
+		t.Error("error making first id: ", err)
+	}
+
+	i2, err := i1.makeChildId()
+
+	if err != nil {
+		t.Error("error making child id: ", err)
+	}
+
+	if i2.Height != 1 {
+		t.Error("child height was not set correctly.  Height was: ", i2.Height)
+	}
+
+	if bytes.Equal(i2.Identifier, i1.Identifier) {
+		t.Error("child had the same identifier as parent")
+	}
+}
+
+func TestRootId (t *testing.T) {
+	i, err := rootId.makeChildId()
+
+	if err != nil {
+		t.Error("error making id: ", err)
+	}
+
+	if i.Height != 1 {
+		t.Error("childHeight is not correct: ", i.Height)
+	}
+
+	if len(i.Key()) != 24 {
+		t.Error("there were not the right number of bytes in the new id's key: ", len(i.Key()))
+	}
+
+	if bytes.Equal(i.Identifier, rootId.Identifier) {
+		t.Error("Id had the same identifier as root")
+	}
 }

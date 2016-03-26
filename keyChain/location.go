@@ -8,65 +8,42 @@ options may be added later.
 
 import (
 	"fmt"
-	"bytes"
 )
 
-type location []Id
+type loc []Id
 
-func (l location) getId () Id {
-	return l[len(l) - 1]
-}
-
-func (l location) Key() ([]byte, error) {
-	key := make([]byte, 0, len(l)*8)
-
-	for _, id := range l {
-		idKey, err := id.Key()
-
-		if err != nil {
-			fmt.Println("error converting id, ", id, " to key")
-			return nil, err
-		}
-
-		key = append(key, idKey...)
-	}
-
-	return key, nil
-}
-
-func (l location) KeyString() (string, error) {
-	k, err := l.Key()
-	return string(k), err
-}
-
-func (bucket location) makeBranchLocation () (location, error) {
+func makeBranchLoc (bucket loc, parent loc) (loc, error) {
 	length := len(bucket) + 2
 
-	l := make([]Id, 0, length)
-	copy(l, bucket)
+	loc := make([]Id, length)
+	copy(loc, bucket)
 
-	bucketId := bucket.getId()
+	parentId := parent.GetId()
 
-	l[length - 2] = bucketId
+	loc[length - 2] = parentId
 	var err error
-	l[length - 1], err = makeId(bucketId.Height + 1)
+	loc[length - 1], err = parentId.makeChildId()
 	
 	if err != nil {
 		fmt.Println("Error making Id", err)
-		return l, err
+		return loc, err
 	}
 
-	return l, nil
+	return loc, nil
 }
 
-func (bucket location) makeTreeLocation () (location, error) {
-	bucketId := bucket.getId()
+func makeTreeLoc (bucket loc) (loc, error) {
+	bucketId := bucket.GetId()
 
-	id, err := makeId(bucketId.Height + 1)
+	if bucketId.Identifier == nil {
+		bucketId.Height = 0
+	}
+
+	id, err := bucketId.makeChildId()
 
 	if err != nil {
 		fmt.Println("Error making Id", err)
-		return location{}, err
+		return loc{}, err
 	}
 
 	bucket = append(bucket, id)
@@ -74,20 +51,38 @@ func (bucket location) makeTreeLocation () (location, error) {
 	return bucket, nil
 } 
 
-func (l1 location) Equals (l2 location) bool {
-	k1, err := l1.Key()
+func (loc loc) Key() []byte {
+	key := make([]byte, 0, len(loc)*8)
 
-	if err != nil {
-		fmt.Println("Error converting location 1 to key to check equality", err)
+	for _, id := range loc {
+		key = append(key, id.Key()...)
+	}
+
+	return key
+}
+
+func (loc loc) KeyString() string {
+	return string(loc.Key())
+}
+
+func (loc loc) GetId () Id {
+	if(len(loc) != 0) {
+		return loc[len(loc) - 1]
+	} else {
+		return Id{}
+	}
+}
+
+func (loc1 loc) Equal (loc2 loc) bool {
+	if len(loc1) != len(loc2) {
 		return false
 	}
 
-	k2, err := l2.Key()
-
-	if err != nil {
-		fmt.Println("Error converting location 1 to key to check equality", err)
-		return false
+	for ind, id := range loc1 {
+		if !id.Equal(loc2[ind]) {
+			return false
+		}
 	}
 
-	return bytes.Equal(k1, k2)
+	return true
 }

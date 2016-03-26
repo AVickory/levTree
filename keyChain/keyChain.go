@@ -6,19 +6,13 @@ import (
 //A keyChain keeps track of any number of nested buckets and an Id which can be
 //translated into a byte slice key.
 type keyChain struct {
-	Self location
-	Parent location
-	ChildBucket location //note that using getId on this location doesn't really make sense
+	Self loc
+	Parent loc
+	ChildBucket loc //note that using getId on this location doesn't really make sense
 }
 
-//noNameSpace is a blank keyChain to be used as the zeroth tier bucket.
-var noNameSpace keyChain = keyChain{
-	Self: location{}
-	ChildBucket: location{}
-}
-
-func MakeBranchKeyChain (parentLoc keyChain) (keyChain, error) {
-	self, err := parentLoc.ChildBucket.makeBranchLocation()
+func MakeBranchKeyChain (parent keyChain) (keyChain, error) {
+	self, err := makeBranchLoc(parent.ChildBucket, parent.Self)
 
 	if err != nil {
 		fmt.Println("Error making branch key:", err)
@@ -27,15 +21,15 @@ func MakeBranchKeyChain (parentLoc keyChain) (keyChain, error) {
 
 	b := keyChain{
 		Self: self,
-		Parent: parentLoc.Self,
-		ChildBucket: parentLoc.ChildBucket,
+		Parent: parent.Self,
+		ChildBucket: parent.ChildBucket,
 	}
 
 	return b, nil
 }
 
 func MakeTreeKeyChain (parent keyChain) (keyChain, error) {
-	self, err := parent.ChildBucket.makeTreeLocation()
+	self, err := makeTreeLoc(parent.ChildBucket)
 
 	if err != nil {
 		fmt.Println("Error making branch key:", err)
@@ -45,23 +39,23 @@ func MakeTreeKeyChain (parent keyChain) (keyChain, error) {
 	t := keyChain{
 		Self: self,
 		Parent: parent.Self,
-		ChildBucket: append(parent.ChildBucket, self.getId()),
+		ChildBucket: self,
 	}
 
 	return t, nil
 }
 
 func (k keyChain) IsTree () bool {
-	return k.ChildBucket.Equals(k.Self)
+	return k.ChildBucket.Equal(k.Self)
 }
 
 //Converts the keyChain into a single byte slice
-func (k keyChain) Key() ([]byte, error) {
+func (k keyChain) Key() []byte {
 	return k.Self.Key()
 }
 
 //produces the key as a string.  This is primarily so that locations can be
 //converted to the keys of maps.
-func (k keyChain) KeyString() (string, error) {
+func (k keyChain) KeyString() string {
 	return k.Self.KeyString()
 }
