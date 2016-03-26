@@ -35,7 +35,7 @@ func makeBranchLoc (bucket loc, parent loc) (loc, error) {
 func makeTreeLoc (bucket loc) (loc, error) {
 	bucketId := bucket.GetId()
 
-	if bucketId.Identifier == nil {
+	if bucketId.Identifier == nil || len(bucketId.Identifier) == 0{
 		bucketId.Height = 0
 	}
 
@@ -69,7 +69,7 @@ func (loc loc) GetId () Id {
 	if(len(loc) != 0) {
 		return loc[len(loc) - 1]
 	} else {
-		return Id{}
+		return rootId
 	}
 }
 
