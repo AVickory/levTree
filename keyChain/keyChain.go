@@ -59,3 +59,7 @@ func (k keyChain) Key() []byte {
 func (k keyChain) KeyString() string {
 	return k.Self.KeyString()
 }
+
+func (k1 keyChain) Equal(k2 keyChain) bool {
+	return k1.Self.Equal(k2.Self)
+}
