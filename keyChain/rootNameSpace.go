@@ -1,6 +1,6 @@
 package keyChain
 
-var root keyChain
+var rootKeyChain keyChain
 
 var rootLoc loc
 
@@ -16,7 +16,7 @@ func init () {
 		rootId,
 	}
 
-	root = keyChain{
+	rootKeyChain = keyChain{
 		Self: rootLoc,
 		Parent: rootLoc,
 		ChildBucket: rootLoc,

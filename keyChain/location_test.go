@@ -203,6 +203,13 @@ func TestMakeBranchOnBranchOnTree (t *testing.T) {
 }
 
 func TestGetId (t *testing.T) {
+	rId := rootLoc.GetId()
+
+	if !rId.Equal(rootId) {
+		t.Error("rootLoc's Id was not root Id: ", rId)
+	}
+
+
 	tree, err := makeTreeLoc(rootLoc)
 
 	if err != nil {
