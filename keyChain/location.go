@@ -7,49 +7,17 @@ options may be added later.
 */
 
 import (
-	"fmt"
+	// "fmt"
 )
 
 type Loc []Id
 
-func makeBranchLoc (bucket Loc, parent Loc) (Loc, error) {
-	length := len(bucket) + 2
-
-	loc := make([]Id, length)
-	copy(loc, bucket)
-
-	parentId := parent.GetId()
-
-	loc[length - 2] = parentId
-	var err error
-	loc[length - 1], err = parentId.makeChildId()
-	
-	if err != nil {
-		fmt.Println("Error making Id", err)
-		return loc, err
-	}
-
-	return loc, nil
+func (l Loc) copyAndAppend (Ids ...Id) Loc {
+	newL := make([]Id, len(l), len(l) + len(Ids))
+	copy(newL, l)
+	newL = append(newL, Ids...)
+	return newL
 }
-
-func makeTreeLoc (bucket Loc) (Loc, error) {
-	bucketId := bucket.GetId()
-
-	if bucketId.Identifier == nil || len(bucketId.Identifier) == 0{
-		bucketId.Height = 0
-	}
-
-	id, err := bucketId.makeChildId()
-
-	if err != nil {
-		fmt.Println("Error making Id", err)
-		return Loc{}, err
-	}
-
-	bucket = append(bucket, id)
-
-	return bucket, nil
-} 
 
 func (Loc Loc) Key() []byte {
 	key := make([]byte, 0, len(Loc)*8)
@@ -85,8 +53,4 @@ func (loc1 Loc) Equal (loc2 Loc) bool {
 	}
 
 	return true
-}
-
-func (loc Loc) Height() uint64 {
-	return loc.GetId().Height
 }

@@ -17,8 +17,7 @@ func init () {
 	}
 
 	Root = KeyChain{
-		Self: rootLoc,
-		Parent: rootLoc,
-		ChildBucket: rootLoc,
+		NameSpace: rootLoc,
+		Id: rootId,
 	}
 }

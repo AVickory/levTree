@@ -5,166 +5,187 @@ import (
 	"testing"
 )
 
+// func testChildTree(t *testing.T, child KeyChain, parent KeyChain) {
+// 	if len(parent.NameSpace) + 1 != len(child.NameSpace) {
+// 		t.Error("child's namespace was not 1 element longer than parent")
+// 	}
+// 	if parent.NameSpace.Equal(child.NameSpace[:len(parent.NameSpace)]) {
+// 		t.Error("child's namespace does not contain parent's namespace")
+// 	}
+// 	if !child.Id.Equal(child.NameSpace[len(child.NameSpace) - 1]) {
+// 		t.Error("child should be in it's own namespace")
+// 	}
+// 	if child.Id.Equal(parent.Id) {
+// 		t.Error("")
+// 	}
+// 	if len(child.Ancestors) != 0 {
+// 		t.Error("")
+// 	}
+// }
+
 func TestMakeTreeKeyChainRoot (t *testing.T) {
-	tree, err := MakeTreeKeyChain(Root)
+	tree, err := Root.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making tree: ", err)
 	}
 
-	tId := tree.Self.GetId()
+	tId := tree.Id
 
-	if tree.Self.Equal(rootLoc) {
-		t.Error("tree's self is equal to root location: ", tree.Self)
+	if tree.GetLoc().Equal(rootLoc) {
+		t.Error("tree's self is equal to root location: ", tree.GetLoc())
 	}
 
 	if tId.Height != 1 {
 		t.Error("something went wrong making the tree's Id: ", tId)
 	}
 
-	if !tree.Self.Equal(tree.ChildBucket) {
+	if !tree.GetLoc().Equal(tree.GetChildBucket()) {
 		t.Error("tree's self and ChildBucket should have been the same: ", 
-			"\nself: ", tree.Self,
-			"\nchildBucket: ", tree.ChildBucket)
+			"\nself: ", tree.GetLoc(),
+			"\nchildBucket: ", tree.GetChildBucket())
 	}
 
-	if !tree.Parent.Equal(rootLoc) {
-		t.Error("tree's parent should have been equal to root Location: ", tree.Parent)
+	if !tree.GetParentLoc().Equal(rootLoc) {
+		t.Error("tree's parent should have been equal to root Location: ", tree.GetParentLoc())
 	}
 
 }
 
 func TestMakeTreeKeyChainOnTree (t *testing.T) {
-	parent, err := MakeTreeKeyChain(Root)
+	parent, err := Root.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making parent: ", err)
 	}
 
-	child, err := MakeTreeKeyChain(parent)
+	child, err := parent.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making tree: ", err)
 	}
 
-	cId := child.Self.GetId()
+	cId := child.Id
 
-	if child.Self.Equal(parent.Self) {
-		t.Error("tree's self is equal to root location: ", child.Self)
+	if child.GetLoc().Equal(parent.GetLoc()) {
+		t.Error("tree's self is equal to root location: ", child.GetLoc())
 	}
 
 	if cId.Height != 2 {
 		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if !child.Self.Equal(child.ChildBucket) {
+	if !child.GetLoc().Equal(child.GetChildBucket()) {
 		t.Error("tree's self and ChildBucket should have been the same: ", 
-			"\nself: ", child.Self,
-			"\nchildBucket: ", child.ChildBucket)
+			"\nself: ", child.GetLoc(),
+			"\nchildBucket: ", child.GetChildBucket())
 	}
 
-	if !child.Parent.Equal(parent.Self) {
-		t.Error("tree's parent should have been equal to root Location: ", child.Parent)
+	if !child.GetParentLoc().Equal(parent.GetLoc()) {
+		t.Error("tree's parent should have been equal to parent Location \nchild: ", child.GetParentLoc(), "\nparent: ", parent.GetLoc())
 	}
 }
 
 func TestMakeBranchKeyChainRoot (t *testing.T) {
-	branch, err := MakeBranchKeyChain(Root)
+	branch, err := Root.MakeChildBranch()
 
 	if err != nil {
 		t.Error("error making branch: ", err)
 	}
 
-	if branch.Self.Equal(rootLoc){
-		t.Error("branch's self was equal to rootLoc: ", branch.Self)
+	if branch.GetLoc().Equal(rootLoc){
+		t.Error("branch's self was equal to rootLoc: ", branch.GetLoc())
 	}
 
-	if bId := branch.Self.GetId(); bId.Height != 1 {
-		t.Error("branch's Id was set incorrectly: ", branch.Self)
+	if bId := branch.Id; bId.Height != 1 {
+		t.Error("branch's Id was set incorrectly: ", branch.GetLoc())
 	}
 
-	if !branch.ChildBucket.Equal(rootLoc) {
-		t.Error("branch's child bucket should have been it's parent's self: ", branch.ChildBucket)
+	if !branch.GetChildBucket().Equal(rootLoc.copyAndAppend(branch.Id)) {
+		t.Error("branch's child bucket should have been it's parent's self plus the branch's Id: ", branch.GetChildBucket())
 	}
 
-	if !branch.Parent.Equal(rootLoc) {
-		t.Error("branch's parent was not equal to it's parent's self: ", branch.Parent)
+	if !branch.GetParentLoc().Equal(rootLoc) {
+		t.Error("branch's parent was not equal to it's parent's self: ", 
+			"\nbranch: ", branch, 
+			"\nbranch ParentLoc: ", branch.GetParentLoc(),
+			"\nparent: ", Root)
 	}
 
 }
 
 func TestMakeBranchKeyChainOnTree (t *testing.T) {
-	parent, err := MakeTreeKeyChain(Root)
+	parent, err := Root.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making parent: ", err)
 	}
 
-	child, err := MakeBranchKeyChain(parent)
+	child, err := parent.MakeChildBranch()
 
 	if err != nil {
 		t.Error("error making tree: ", err)
 	}
 
-	cId := child.Self.GetId()
+	cId := child.Id
 
 	if cId.Height != 2 {
 		t.Error("something went wrong making the branch's Id: ", cId)
 	}
 
-	if child.Self.Equal(parent.Self) {
-		t.Error("branch's self was equal to rootLoc: ", child.Self)
+	if child.GetLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's self was equal to rootLoc: ", child.GetLoc())
 	}
 
-	if !child.ChildBucket.Equal(parent.ChildBucket) {
-		t.Error("branch's and parent's ChildBuckets should have been the same: ", 
-			"\nparent: ", parent.ChildBucket,
-			"\nchild: ", child.ChildBucket)
+	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
+		t.Error("branch's Child Bucket should be parent's Loc plus branch's ID: ", 
+			"\nparent: ", parent.GetChildBucket(),
+			"\nchild: ", child.GetChildBucket())
 	}
 
-	if !child.Parent.Equal(parent.Self) {
-		t.Error("branch's parent should have been equal to parent's self: ", child.Parent)
+	if !child.GetParentLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
 	}
 
 }
 
 func TestMakeBranchKeyChainOnBranch (t *testing.T) {
-	parent, err := MakeBranchKeyChain(Root)
+	parent, err := Root.MakeChildBranch()
 
 	if err != nil {
 		t.Error("error making branch")
 	}
 
-	child, err := MakeBranchKeyChain(parent)
+	child, err := parent.MakeChildBranch()
 
 	if err != nil {
 		t.Error("error making branch")
 	}
 
-	cId := child.Self.GetId()
+	cId := child.Id
 
 	if cId.Height != 2 {
 		t.Error("something went wrong making the branch's Id: ", cId)
 	}
 
-	if child.Self.Equal(parent.Self) {
-		t.Error("branch's self was equal to parent's self: ", child.Self)
+	if child.GetLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's self was equal to parent's self: ", child.GetLoc())
 	}
 
-	if !child.ChildBucket.Equal(parent.ChildBucket) {
-		t.Error("branch's and parent's ChildBuckets should have been the same: ", 
-			"\nparent: ", parent.ChildBucket,
-			"\nchild: ", child.ChildBucket)
+	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
+		t.Error("branch's Child Bucket should be parent's NameSpace plus branch's ID: ", 
+			"\nparent: ", parent.GetChildBucket(),
+			"\nchild: ", child.GetChildBucket())
 	}
 
-	if !child.Parent.Equal(parent.Self) {
-		t.Error("branch's parent should have been equal to parent's self: ", child.Parent)
+	if !child.GetParentLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
 	}
 
 }
 
 func TestIsTree (t *testing.T) {
-	tree, err := MakeTreeKeyChain(Root)
+	tree, err := Root.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making tree: ", err)
@@ -176,7 +197,7 @@ func TestIsTree (t *testing.T) {
 		t.Error("tree is not a tree: ", tree)
 	}
 
-	branch, err := MakeBranchKeyChain(Root)
+	branch, err := Root.MakeChildBranch()
 
 	if err != nil {
 		t.Error("error making branch: ", err)
@@ -191,19 +212,19 @@ func TestIsTree (t *testing.T) {
 }
 
 func TestPassThroughFunctions (t *testing.T) {
-	parent, err := MakeTreeKeyChain(Root)
+	parent, err := Root.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making parent: ", err)
 	}
 
-	child, err := MakeTreeKeyChain(parent)
+	child, err := parent.MakeChildTree()
 
 	if err != nil {
 		t.Error("error making child: ", err)
 	}
 
-	if !bytes.Equal(child.Key(), child.Self.Key()) {
+	if !bytes.Equal(child.Key(), child.GetLoc().Key()) {
 		t.Error("keychain Key is not passing through correctly")
 	}
 
@@ -211,7 +232,7 @@ func TestPassThroughFunctions (t *testing.T) {
 		t.Error("child key equal to parent key!")
 	}
 
-	if child.KeyString() != child.Self.KeyString() {
+	if child.KeyString() != child.GetLoc().KeyString() {
 
 	}
 

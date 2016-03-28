@@ -60,6 +60,10 @@ func (i Id) makeChildId() (Id, error) {
 	return makeId(i.Height + 1)
 }
 
+func (i Id) makeSiblingId() (Id, error) {
+	return makeId(i.Height)
+}
+
 func (i1 Id) Equal(i2 Id) bool {
 	return i1.Height == i2.Height && bytes.Equal(i1.Identifier, i2.Identifier)
 }
