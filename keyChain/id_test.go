@@ -118,6 +118,28 @@ func TestMakeChildId (t *testing.T) {
 	}
 }
 
+func TestMakeSiblingId (t *testing.T) {
+	i1, err := makeId(0)
+
+	if err != nil {
+		t.Error("error making first id: ", err)
+	}
+
+	i2, err := i1.makeSiblingId()
+
+	if err != nil {
+		t.Error("error making child id: ", err)
+	}
+
+	if i2.Height != 0 {
+		t.Error("child height was not set correctly.  Height was: ", i2.Height)
+	}
+
+	if bytes.Equal(i2.Identifier, i1.Identifier) {
+		t.Error("child had the same identifier as parent")
+	}	
+}
+
 func TestRootId (t *testing.T) {
 	i, err := rootId.makeChildId()
 

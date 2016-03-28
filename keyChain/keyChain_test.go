@@ -184,6 +184,116 @@ func TestMakeBranchKeyChainOnBranch (t *testing.T) {
 
 }
 
+func TestMakeBranchKeyChainOnBranchOnBranch (t *testing.T) {
+	grandParent, err := Root.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	parent, err := grandParent.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	child, err := parent.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	cId := child.Id
+
+	if cId.Height != 3 {
+		t.Error("something went wrong making the branch's Id: ", cId)
+	}
+
+	if child.GetLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's self was equal to parent's self: ", child.GetLoc())
+	}
+
+	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
+		t.Error("branch's Child Bucket should be parent's NameSpace plus branch's ID: ", 
+			"\nparent: ", parent.GetChildBucket(),
+			"\nchild: ", child.GetChildBucket())
+	}
+
+	if !child.GetParentLoc().Equal(parent.GetLoc()) {
+		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
+	}
+
+}
+
+func TestMakeSiblingTree (t *testing.T) {
+	tree1, err := Root.MakeChildTree()
+
+	if err != nil {
+		t.Error("error making tree1: ", err)
+	}
+
+	tree2, err := tree1.MakeSibling()
+
+	if err != nil {
+		t.Error("error making sibling tree: ", err)
+	}
+
+	if !tree2.GetParentLoc().Equal(tree1.GetLoc()) {
+		t.Error("sibling should have had same parent as original")
+	}
+}
+
+func TestMakeSiblingBranch (t *testing.T) {
+	branch1, err := Root.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	branch2, err := branch1.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	branch3, err := branch2.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	branch1S, err := branch1.MakeSibling()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	branch2S, err := branch2.MakeSibling()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	branch3S, err := branch3.MakeSibling()
+
+	if err != nil {
+		t.Error("error making branch")
+	}
+
+	if !branch1S.GetParentLoc().Equal(Root.GetLoc()) {
+		t.Error("branch1S sibling has wrong parent: ", branch1S.GetParentLoc())
+	}
+
+	if !branch2S.GetParentLoc().Equal(branch1.GetLoc()) {
+		t.Error("branch2S sibling has wrong parent: ", branch2S.GetParentLoc())
+	}
+
+	if !branch3S.GetParentLoc().Equal(branch2.GetLoc()) {
+		t.Error("branch3S sibling has wrong parent: ", branch2S.GetParentLoc())
+	}
+
+}
+
 func TestIsTree (t *testing.T) {
 	tree, err := Root.MakeChildTree()
 
@@ -211,6 +321,35 @@ func TestIsTree (t *testing.T) {
 
 }
 
+func TestParentIsTree (t *testing.T) {
+	tree, err := Root.MakeChildTree()
+
+	if err != nil {
+		t.Error("error making tree: ", err)
+	}
+
+	parent, err := tree.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch: ", err)
+	}
+
+	child, err := parent.MakeChildBranch()
+
+	if err != nil {
+		t.Error("error making branch: ", err)
+	}
+
+	if !parent.ParentIsTree() {
+		t.Error("parent's parent is a tree but ParentIsTree returned false.")
+	}
+
+	if child.ParentIsTree() {
+		t.Error("child's parent is not a tree but ParentIsTree returned true.")
+	}
+
+}
+
 func TestPassThroughFunctions (t *testing.T) {
 	parent, err := Root.MakeChildTree()
 
@@ -232,12 +371,28 @@ func TestPassThroughFunctions (t *testing.T) {
 		t.Error("child key equal to parent key!")
 	}
 
-	if child.KeyString() != child.GetLoc().KeyString() {
+	if !bytes.Equal(child.ParentKey(), child.GetParentLoc().Key()) {
+		t.Error("keychain ParentKey is not passing through correctly")
+	}
 
+	if !bytes.Equal(child.ParentKey(), parent.Key()) {
+		t.Error("child key equal to parent key!")
+	}	
+
+	if !bytes.Equal(child.ChildKeyPrefix(), child.GetChildBucket().Key()) {
+		t.Error("keyChain ChildKeyPrefix is not passing through correctly")
+	}
+
+	if !bytes.Equal(parent.ChildKeyPrefix(), child.GetLoc()[:len(child.GetLoc()) - 1].Key()) {
+		t.Error("child's key does not have parent's child prefix")
+	}
+
+	if child.KeyString() != child.GetLoc().KeyString() {
+		t.Error("child keystring not equal to child's locations keystring")
 	}
 
 	if child.KeyString() == parent.KeyString() {
-		t.Error("child key equal to parent key!")
+		t.Error("child keyString equal to parent keyString!")
 	}
 
 	if !child.Equal(child) {

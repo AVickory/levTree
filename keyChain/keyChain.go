@@ -71,9 +71,10 @@ func (parent KeyChain) MakeChildBranch() (KeyChain, error) {
 }
 
 func (parent KeyChain) MakeChildTree () (KeyChain, error) {
+	//if called on a branch, will behave as if called on the branch's nearest tree ancestor.
 	parent.Ancestors = make([]Id, 0)
 	var err error
-	parent.Id, err = parent.Id.makeChildId()
+	parent.Id, err = parent.NameSpace.GetId().makeChildId()
 	parent.NameSpace = parent.NameSpace.copyAndAppend(parent.Id)
 	if err != nil {
 		fmt.Println("error making child Id: ", err)
