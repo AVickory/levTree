@@ -38,6 +38,22 @@ func (parent KeyChain) GetChildBucket() Loc {
 	}
 }
 
+func (k KeyChain) GetSiblingBucket() Loc {
+	var bucket []Id
+
+	if k.IsTree() {
+		bucket = make([]Id, len(k.NameSpace) - 1)
+		copy(bucket, k.NameSpace[:len(k.NameSpace) - 1])
+	} else if k.ParentIsTree() {
+		bucket = make([]Id, len(k.NameSpace))
+		copy(bucket, k.NameSpace)
+	} else {
+		bucket = k.NameSpace.copyAndAppend(k.Ancestors.GetId())
+	}
+
+	return bucket
+}
+
 func (k KeyChain) GetLoc() Loc {
 	var self Loc
 	if !k.IsTree() {
@@ -86,16 +102,41 @@ func (parent KeyChain) MakeChildTree () (KeyChain, error) {
 
 func (k KeyChain) MakeSibling () (KeyChain, error) {
 	var err error
+	originalIsATree := k.IsTree()
+
 	k.Id, err = k.Id.makeSiblingId()
+
 	if err != nil {
 		fmt.Println("error making sibling id", err)
 		return k, err
 	}
+
+	NameSpace := make([]Id, len(k.NameSpace))
+
+	copy(NameSpace, k.NameSpace)
+
+	k.NameSpace = NameSpace
+
+	Ancestors := make([]Id, len(k.Ancestors))
+
+	copy(Ancestors, k.Ancestors)
+
+	k.Ancestors = Ancestors
+
+	if originalIsATree {
+		k.NameSpace[len(k.NameSpace) - 1] = k.Id
+	}
+
 	return k, nil
 }
 
 
 func (k KeyChain) IsTree () bool {
+	// fmt.Println("\n---START---")
+	// fmt.Println(k)
+	// fmt.Println(k.Id)
+	// fmt.Println(k.NameSpace.GetId())
+	// fmt.Println(len(k.Ancestors))
 	return k.Id.Equal(k.NameSpace.GetId()) && len(k.Ancestors) == 0
 }
 

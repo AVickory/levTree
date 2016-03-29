@@ -238,8 +238,19 @@ func TestMakeSiblingTree (t *testing.T) {
 		t.Error("error making sibling tree: ", err)
 	}
 
-	if !tree2.GetParentLoc().Equal(tree1.GetLoc()) {
+	if !tree2.GetParentLoc().Equal(Root.GetLoc()) {
 		t.Error("sibling should have had same parent as original")
+	}
+
+	if !tree1.GetSiblingBucket().Equal(tree2.GetSiblingBucket()) {
+		t.Error("sibling trees sibling buckets are not the same", 
+			"\ntree1: ", tree1,//.GetSiblingBucket(),
+			"\ntree2: ", tree2,//.GetSiblingBucket(),)
+			)
+	}
+
+	if !tree2.GetSiblingBucket().Equal(Root.GetChildBucket()) {
+		t.Error("sibling tree's sibling bucket is not the parent's child bucket")
 	}
 }
 
@@ -281,7 +292,9 @@ func TestMakeSiblingBranch (t *testing.T) {
 	}
 
 	if !branch1S.GetParentLoc().Equal(Root.GetLoc()) {
-		t.Error("branch1S sibling has wrong parent: ", branch1S.GetParentLoc())
+		t.Error("branch1S sibling has wrong parent: ", branch1S.GetParentLoc(),
+			"\nbranch1S ParentLoc: ", branch1S.GetParentLoc(),
+			"\nparent's loc: ", Root.GetLoc())
 	}
 
 	if !branch2S.GetParentLoc().Equal(branch1.GetLoc()) {
@@ -291,6 +304,21 @@ func TestMakeSiblingBranch (t *testing.T) {
 	if !branch3S.GetParentLoc().Equal(branch2.GetLoc()) {
 		t.Error("branch3S sibling has wrong parent: ", branch2S.GetParentLoc())
 	}
+
+	if !branch1S.GetSiblingBucket().Equal(Root.GetChildBucket()) {
+		t.Error("branch1S sibling bucket is not in parent's bucket: ", 
+			"\nchild: ", branch1S.GetSiblingBucket(),
+			"\nparent: ", Root.GetChildBucket(),)
+	}
+
+	if !branch2S.GetSiblingBucket().Equal(branch1.GetChildBucket()) {
+		t.Error("branch2S sibling is not in parent's bucket: ", branch2S.GetSiblingBucket())
+	}
+
+	if !branch3S.GetSiblingBucket().Equal(branch2.GetChildBucket()) {
+		t.Error("branch3S sibling is not in parent's bucket: ", branch2S.GetSiblingBucket())
+	}
+
 
 }
 
