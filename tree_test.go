@@ -30,7 +30,7 @@ func testParentChildRel(t *testing.T, parent Node, child Node) {
 	if parent.Children[child.KeyString()].Data != child.Parent.Data {
 		t.Error("PARENT'S AND CHILD'S METADATA ARE NOT EQUAL")
 	}
-	if !parent.Loc.ChildBucket.Equal(child.Loc.Self[:len(parent.Loc.ChildBucket)]) {
+	if !parent.Loc.GetChildBucket().Equal(child.Loc.GetLoc()[:len(parent.Loc.GetChildBucket())]) {
 		t.Error("This Node was put in the wrong bucket!")
 	}
 }
@@ -43,11 +43,15 @@ func testNode(t *testing.T, parent Node, n Node, metaData updater, data updater)
 		t.Error("NODE SHOULD NOT HAVE CHILDREN: ", len(n.Children))
 	}
 	if n.Loc.IsTree() {
-		if len(n.Key()) != len(parent.Loc.ChildBucket.Key())+24 {
+		if len(n.Key()) != len(parent.Loc.GetChildBucket().Key())+24 {
+			t.Error("NODE KEY SHOULD BE A GUUID: ", len(n.Key()))
+		}
+	} else if n.Loc.ParentIsTree() {
+		if len(n.Key()) != len(parent.Loc.GetChildBucket().Key())+48 {
 			t.Error("NODE KEY SHOULD BE A GUUID: ", len(n.Key()))
 		}
 	} else {
-		if len(n.Key()) != len(parent.Loc.ChildBucket.Key())+48 {
+		if len(n.Key()) != len(parent.Loc.GetChildBucket().Key())+24 {
 			t.Error("NODE KEY SHOULD BE A GUUID: ", len(n.Key()))
 		}
 	}
@@ -60,30 +64,30 @@ func testNode(t *testing.T, parent Node, n Node, metaData updater, data updater)
 
 func testBranch(t *testing.T, parent Node, branch Node, metaData updater, data updater) {
 	testNode(t, parent, branch, metaData, data)
-	if branch.Loc.Self.Height() != parent.Loc.Self.Height()+1 {
+	if branch.Loc.Height != parent.Loc.Height+1 {
 		t.Error("branch should be at height parent + 1 ")
 	}
-	if !branch.Loc.ChildBucket.Equal(parent.Loc.ChildBucket) {
+	if !branch.Loc.GetParentLoc().Equal(parent.Loc.GetLoc()) {
 		t.Error("branch will put children in wrong bucket!")
 	}
 }
 
 func testTree(t *testing.T, parent Node, tree Node, metaData updater, data updater) {
 	testNode(t, parent, tree, metaData, data)
-	if tree.Loc.Self.Height() != parent.Loc.Self.Height()+1 {
+	if tree.Loc.Height != parent.Loc.Height+1 {
 		t.Error("tree should be at height parent + 1: ")
 	}
-	if tree.Loc.ChildBucket.Equal(parent.Loc.Self) {
+	if tree.Loc.GetChildBucket().Equal(parent.Loc.GetLoc()) {
 		t.Error("tree will put children in wrong bucket!")
 	}
 }
 
 func testForest(t *testing.T, root Node, forest Node, metaData updater, data updater) {
 	testNode(t, root, forest, metaData, data)
-	if forest.Loc.Self.Height() != 1 {
+	if forest.Loc.Height != 1 {
 		t.Error("forest should be at height = 1: ")
 	}
-	if forest.Loc.ChildBucket.Equal(root.Loc.Self) {
+	if forest.Loc.GetChildBucket().Equal(root.Loc.GetLoc()) {
 		t.Error("forest will put children in wrong bucket!")
 	}
 }
@@ -277,7 +281,7 @@ func testNodeEquality(n1 Node, n2 Node) bool {
 	tests := []bool{
 		n1.Record.Data == n2.Record.Data,
 		n1.Record.Loc.Equal(n2.Record.Loc),
-		n1.Loc.Height() == n2.Loc.Height(),
+		n1.Loc.Height == n2.Loc.Height,
 		testRecordEquality(n1.Parent, n2.Parent),
 		testRecordListEquality(n1.Children, n2.Children),
 		// testMapEquality(n1.ChildrenMap, n2.ChildrenMap),

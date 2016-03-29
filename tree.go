@@ -143,7 +143,7 @@ func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) 
 func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error) {
 	var newBranch Node
 
-	loc, err := keyChain.MakeBranchKeyChain(parent.Loc)
+	loc, err := parent.Loc.MakeChildBranch()
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
@@ -168,7 +168,7 @@ func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error)
 func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
 	var newTree Node
 
-	loc, err := keyChain.MakeTreeKeyChain(parent.Loc)
+	loc, err := parent.Loc.MakeChildTree()
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
