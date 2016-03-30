@@ -18,10 +18,10 @@ have to compete for access.  When an update is called for an Node that is in
 the funnel that update will be applied to that copy of the Node in the funnel.
 */
 import (
-	"bytes"
 	"encoding/gob"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"sync"
 	"time"
 	"github.com/AVickory/levTree/keyChain"
@@ -50,7 +50,6 @@ func init() {
 	gob.Register(keyChain.KeyChain{})
 	gob.Register(keyChain.Id{})
 	gob.Register(keyChain.Loc{})
-	gob.Register(Record{})
 	gob.Register(Node{})
 }
 
@@ -73,11 +72,11 @@ func writeFunnelToBatch() *leveldb.Batch {
 	batch := new(leveldb.Batch)
 
 	for _, n := range funnel.nodes {
-		nSerial, err := serialize(n)
+		nSerial, err := n.serialize()
 
 		if err != nil {
 			fmt.Println("error serializing Node: ", err)
-			fmt.Println(n.Loc.Key(), n.Data)
+			fmt.Println(n.Key(), n.Data)
 
 		} else {
 			batch.Put(n.Key(), nSerial)
@@ -89,8 +88,7 @@ func writeFunnelToBatch() *leveldb.Batch {
 	return batch
 }
 
-//Atomically writes a batch to disk it to disk.
-func transactionalBatch(batch *leveldb.Batch) error {
+func writeBatch(batch *leveldb.Batch) error {
 	db, err := leveldb.OpenFile(dbPath, nil)
 	defer db.Close()
 
@@ -99,31 +97,15 @@ func transactionalBatch(batch *leveldb.Batch) error {
 		return err
 	}
 
-	t, err := db.OpenTransaction()
+	err = db.Write(batch, nil)
 
 	if err != nil {
-		fmt.Println("error creating transaction: ", err)
-		t.Discard()
-		return err
-	}
-
-	err = t.Write(batch, nil)
-
-	if err != nil {
-		fmt.Println("error writing to transaction: ", err)
-		t.Discard()
-		return err
-	}
-
-	err = t.Commit()
-
-	if err != nil {
-		fmt.Println("error comitting to transaction: ", err)
+		fmt.Println("error writing batch", err)
 		return err
 	}
 
 	return nil
-}
+} 
 
 //blocks funnel access, Writes all entries in the funnel to disk and then
 //resets the funnel.
@@ -135,10 +117,12 @@ func clearFunnel() error {
 
 		batch := writeFunnelToBatch()
 
-		err := transactionalBatch(batch)
+		// err := transactionalBatch(batch)
+
+		err := writeBatch(batch)
 
 		if err != nil {
-			fmt.Println("transaction err: ", err)
+			fmt.Println("error clearing funnel ", err)
 			return err
 		}
 
@@ -147,70 +131,75 @@ func clearFunnel() error {
 	return nil
 }
 
-//Sets up the rootNode.
-//This function is way to long.  I need to figure out how to break it apart.
-func initializeRoot() error {
-	root := makeRoot()
-
+//At somepoint the return from here and the funnel will be put into a trie, but
+//for now I'm sticking with the basics.  Also this function is too long.
+func getNodesFromBucket(bucket keyChain.Loc) ([]Node, error) { 
 	db, err := leveldb.OpenFile(dbPath, nil)
 	defer db.Close()
 
 	if err != nil {
 		fmt.Println("Error opening file: ", err)
-		return err
+		return nil, err
 	}
 
-	t, err := db.OpenTransaction()
+	nodes := make([]Node, 0, 10)
+
+	var firstError error = nil
+
+	iter := db.NewIterator(util.BytesPrefix(bucket.Key()), nil)
+
+	for iter.Next() {
+		nodes = append(nodes, Node{})
+
+		nSerial := iter.Value()
+		
+		n := new(Node)
+		err := n.deserialize(nSerial)
+
+		if err != nil {
+			fmt.Println("error deserializing record", 
+				"\n\tkey: ", iter.Key(),
+				"\n\tpayload: ", nSerial,
+				"\n\terror: ", err) //should this be returned?
+		} else {
+			nodes = append(nodes, *n) //this is super inefficient.  I'll fix the resizing behavior later.
+		}
+	}
+
+	iter.Release()
+
+	err = iter.Error()
 
 	if err != nil {
-		fmt.Println("Error opening transaction: ", err)
-		t.Discard()
-		return err
+		fmt.Println("error in iterator: ", err)
+		return nodes, err
 	}
 
-	rootInitialized, err := t.Has(root.Loc.Key(), nil)
+	return nodes, err
+}
 
+func getNodesFromBucketUpdateable(bucket keyChain.Loc) ([]Node, error) {
+	dbNodes, err := getNodesFromBucket(bucket)
 	if err != nil {
-		fmt.Println("Error checking for root: ", err)
-		t.Discard()
-		return err
+		fmt.Println("error getting nodes from bucket")
+		return nil, err
 	}
 
-	if rootInitialized {
-		t.Discard()
-		return nil
+	for idx, node := range dbNodes {
+		upToDateNode, isInFunnel := funnel.nodes[node.KeyString()]
+		if isInFunnel {
+			dbNodes[idx] = upToDateNode
+		} else {
+			funnel.nodes[node.KeyString()] = node
+		}
 	}
 
-	rootSerial, err := serialize(root)
-
-	if err != nil {
-		fmt.Println("error serializing root: ", err)
-		t.Discard()
-		return nil
-	}
-
-	err = t.Put(root.Loc.Key(), rootSerial, nil)
-
-	if err != nil {
-		fmt.Println("Error writing root to transaction: ", err)
-		t.Discard()
-		return err
-	}
-
-	err = t.Commit()
-
-	if err != nil {
-		fmt.Println("Error commiting transaction: ", err)
-		return err
-	}
-
-	return nil
-
+	return dbNodes, nil
 }
 
 //gets from the db.  Note that this will not necesarily be up to date if the
 //funnle has not cleared updates into the db.
-func getNodeAt(l locateable) (Node, error) {
+func getNode(l keyChain.Loc) (Node, error) {
 	var n Node
 
 	db, err := leveldb.OpenFile(dbPath, nil)
@@ -228,7 +217,7 @@ func getNodeAt(l locateable) (Node, error) {
 		return n, err
 	}
 
-	n, err = deserialize(nSerial)
+	err = n.deserialize(nSerial)
 
 	if err != nil {
 		fmt.Println("Error deserializing Node: ", err)
@@ -242,13 +231,13 @@ func getNodeAt(l locateable) (Node, error) {
 //This allows update functions to behave atomically, without requiring
 //rewriting all of the boilerplate of figuring out whether or not the Node is
 //already in the funnel.  It should not be used outside of this context.
-func getNodeIntoFunnel(l locateable) (Node, error) {
+func getNodeUpdateable(l keyChain.Loc) (Node, error) {
 
 	n, isInFunnel := funnel.nodes[l.KeyString()]
 
 	if !isInFunnel {
 		var err error
-		n, err = getNodeAt(l)
+		n, err = getNode(l)
 
 		if err != nil {
 			fmt.Println("Error getting Node: ", err)
@@ -260,33 +249,28 @@ func getNodeIntoFunnel(l locateable) (Node, error) {
 	return n, nil
 }
 
-//serializes the Node into a gob and returns it as a byte slice
-func serialize(n Node) ([]byte, error) {
-	var gobble bytes.Buffer
-	enc := gob.NewEncoder(&gobble)
-	err := enc.Encode(n)
+func createNode(n Node) error {
+	db, err := leveldb.OpenFile(dbPath, nil)
+	defer db.Close()
 
 	if err != nil {
-		fmt.Println("SERIALIZATION ERROR: ", err)
-		return []byte{}, err
+		fmt.Println("error opening db: ", err)
+		return err
 	}
 
-	return gobble.Bytes(), nil
-}
-
-//fills the Record with deserialized data from the passed in gob
-func deserialize(value []byte) (Node, error) {
-	var n Node
-	// fmt.Println("value passed in: ", value)
-	gobble := bytes.NewBuffer(value)
-	// fmt.Println("gobble: ", gobble)
-	dec := gob.NewDecoder(gobble)
-	err := dec.Decode(&n)
+	nSerial, err := n.serialize()
 
 	if err != nil {
-		fmt.Println("DESERIALIZATION ERROR: ", err)
-		return n, err
+		fmt.Println("error putting node: ", err)
+		return err
 	}
 
-	return n, nil
+	err = db.Put(n.Key(), nSerial, nil)
+
+	if err != nil {
+		fmt.Println("error writing node to db: ", err)
+		return err
+	}
+
+	return nil
 }

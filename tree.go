@@ -43,149 +43,50 @@ import (
 	"github.com/AVickory/levTree/keyChain"
 )
 
-//this type is just a lexical device to make it clear when an argument
-//represents something that will be passed to an updater's .Update method.
-type updateData interface{}
-
-//Updates are assumed to be commutative.  Note that because of the interface
-//type of the argument, this method will have to coerce it's argument.
-type updater interface {
-	// Update(updateData) (updater, error)
-}
-
-//allows records and nodes to be handled by the same methods.  This ends up
-//simplifying the API in levTree.go a lot since I only have to type assert once
-//instead of needing lots of internal type conversions or copies of identical
-//functions
-type locateable interface {
-	Key() []byte
-	KeyString() string
-	// Update(updateData) (Record, error)
-	// GetData() updater
-}
-
 //a Record describes a location in the db.
-type Record struct {
-	Loc  keyChain.KeyChain
-	Data updater
-}
-
-func (r Record) Key() []byte {
-	return r.Loc.Key()
-}
-func (r Record) KeyString() string {
-	return r.Loc.KeyString()
-}
-// func (r Record) Update(u updateData) (Record, error) {
-// 	Data, err := r.Data.Update(u)
-
-// 	if err != nil {
-// 		fmt.Println("error updating record")
-// 		return r, err
-// 	}
-// 	r.Data = Data
-// 	return r, nil
-// }
-// func (r Record) GetData() updater {
-// 	return r.Data
-// }
-
-//one tree Node.  It is itself a Record and contains records, but it's
-//important to note that the Record objects in the parent and children fields
-//do not necesarily contain the same data that is at the corresponding
-//locations in the db, but rather data describing the connection between those
-//locations and this one.  this is meant to allow a user to traverse the tree
-//without loading more nodes from the db than necesary.
 type Node struct {
-	Record
-
-	Parent Record
-
-	Children    map[string]Record //maps child locations to indices in children slice
-}
-
-func (n Node) Key() []byte {
-	return n.Record.Key()
-}
-func (n Node) KeyString() string {
-	return n.Record.KeyString()
-}
-// func (n Node) Update(u updateData) (Record, error) {
-
-// 	r, err := n.Record.Update(u)
-// 	n.Record = r
-// 	if err != nil {
-// 		return n.Record, err
-// 	}
-// 	return n.Record, nil
-// }
-// func (n Node) GetData() updater {
-// 	return n.Record.GetData()
-// }
-
-func joinParentAndChild(parent Node, child Node, metaData updater) (Node, Node) {
-	// if parent.Children == nil {
-	// 	parent.Children = make(map[string]Record)
-	// }
-
-	parent.Children[child.KeyString()] = Record{
-		Loc:  child.Loc,
-		Data: metaData,
-	}
-	child.Parent = Record{
-		Loc:  parent.Loc,
-		Data: metaData,
-	}
-	return parent, child
+	keyChain.KeyChain
+	Data []byte
 }
 
 //Creates a Node whose children will be in the same namespace as this branch.
-func makeBranch(parent Node, metaData updater, data updater) (Node, Node, error) {
+func (parent Node) makeBranch(data []byte) (Node, error) {
 	var newBranch Node
 
-	loc, err := parent.Loc.MakeChildBranch()
+	kc, err := parent.MakeChildBranch()
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
-		return parent, newBranch, err
+		return newBranch, err
 	}
 
 	newBranch = Node{
-		Record: Record{
-			Loc:  loc,
-			Data: data,
-		},
-		Children:    make(map[string]Record),
+		KeyChain:  kc,
+		Data: data,
 	}
 
-	parent, newBranch = joinParentAndChild(parent, newBranch, metaData)
-
-	return parent, newBranch, err
+	return newBranch, err
 }
 
 //creates a branch of the parent Node who's children will be in a different
 //namespace than the new branch
-func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
+func (parent Node) makeTree(data []byte) (Node, error) {
 	var newTree Node
 
-	loc, err := parent.Loc.MakeChildTree()
+	kc, err := parent.MakeChildTree()
 
 	if err != nil {
 		fmt.Println("error getting new location", err)
-		return parent, newTree, err
+		return newTree, err
 	}
 
 	newTree = Node{
-		Record: Record{
-			Loc:  loc,
-			Data: data,
-		},
-		Children:    make(map[string]Record),
+		KeyChain:  kc,
+		Data: data,
 	}
 
-	parent, newTree = joinParentAndChild(parent, newTree, metaData)
 
-	return parent, newTree, nil
+	return newTree, nil
 }
 
 //branch nodes put their children in the same bucket that they are in while
@@ -198,15 +99,15 @@ func makeTree(parent Node, metaData updater, data updater) (Node, Node, error) {
 
 //creates a tree at height 0 attached to the root.  root should be the root of the db.  You could,
 //but shouldn't, pass any other Node to this function
-func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
-	root, newForest, err := makeTree(root, metaData, data)
+func makeForest(data []byte) (Node, error) {
+	newForest, err := rootNode.makeTree(data)
 
 	if err != nil {
 		fmt.Println("Error creating template tree: ", err)
-		return root, newForest, err
+		return newForest, err
 	}
 
-	return root, newForest, nil
+	return newForest, nil
 }
 
 //the only special characteristic of a forest is that it's Height is 0.
@@ -218,12 +119,35 @@ func makeForest(root Node, metaData updater, data updater) (Node, Node, error) {
 
 func makeRoot() Node {
 	return Node{
-		Record: Record{
-			Loc: keyChain.Root,
-		},
-		Parent: Record{
-			Loc: keyChain.Root,
-		},
-		Children:    make(map[string]Record),
+		keyChain.Root,
 	}
+}
+
+func (n *Node) serialize() ([]byte, error) {
+	var gobble bytes.Buffer
+	enc := gob.NewEncoder(&gobble)
+	err := enc.Encode(*n)
+
+	if err != nil {
+		fmt.Println("SERIALIZATION ERROR: ", err)
+		return []byte{}, err
+	}
+
+	return gobble.Bytes(), nil
+}
+
+//fills the Record with deserialized data from the passed in gob
+func (n *Node) deserialize(value []byte) (error) {
+	// fmt.Println("value passed in: ", value)
+	gobble := bytes.NewBuffer(value)
+	// fmt.Println("gobble: ", gobble)
+	dec := gob.NewDecoder(gobble)
+	err := dec.Decode(n)
+
+	if err != nil {
+		fmt.Println("DESERIALIZATION ERROR: ", err)
+		return err
+	}
+
+	return nil
 }

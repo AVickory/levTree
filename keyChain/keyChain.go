@@ -157,6 +157,10 @@ func (k KeyChain) ChildKeyPrefix() []byte {
 	return k.GetChildBucket().Key()
 }
 
+func (k KeyChain) SiblingKeyPrefix() []byte {
+	return k.GetSiblingBucket().Key()
+}
+
 //produces the key as a string.  This is primarily so that locations can be
 //converted to the keys of maps.
 func (k KeyChain) KeyString() string {
