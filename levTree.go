@@ -101,7 +101,7 @@ func InitDb(path string, writeInterval time.Duration) {
 // a forest is a tree attached to the root Node whose key is the namespace for
 // all of it's children.  Modifications to the returned forest cannot be
 // persisted.
-func NewForest(data []byte) (keyChain.Loc, error) {
+func NewForest(data []byte) (locateable, error) {
 
 	newForest, err := makeForest(data)
 
@@ -117,14 +117,15 @@ func NewForest(data []byte) (keyChain.Loc, error) {
 		return nil, err
 	}
 
-	return newForest.GetLoc(), nil
+	// return newForest.GetLoc(), nil
+	return newForest.KeyChain, nil
 }
 
 // Creates a child of the calling tree or forest in that tree's namespace, whose
 // key is the namespace for all of it's children.  Modifications to the returned
 // tree cannot be persisted.
-func (parent Node) NewTree(data []byte) (keyChain.Loc, error) {
-	newTree, err := parent.makeTree(data)
+func NewTree(parent locateable, data []byte) (locateable, error) {
+	newTree, err := makeTree(parent, data)
 
 	if err != nil {
 		fmt.Println("error making tree Node: ", err)
@@ -138,15 +139,16 @@ func (parent Node) NewTree(data []byte) (keyChain.Loc, error) {
 		return nil, err
 	}
 
-	return newTree.GetLoc(), err
+	// return newTree.GetLoc(), err
+	return newTree.KeyChain, err
 }
 
 // Makes and persists (eventually) a child Node of the calling Node and updates
 // the calling Node's children.  It doesn't return anything, because you won't
 // be able to access it on the db until the funnel flushes. Modifications to the
 // returned forest cannot be persisted.
-func (parent Node) NewBranch(data []byte) (keyChain.Loc, error) {
-	newBranch, err := parent.makeBranch(data)
+func NewBranch(parent locateable, data []byte) (locateable, error) {
+	newBranch, err := makeBranch(parent, data)
 
 	if err != nil {
 		fmt.Println("error making branch Node: ", err)
@@ -160,14 +162,15 @@ func (parent Node) NewBranch(data []byte) (keyChain.Loc, error) {
 		return nil, err
 	}
 
-	return newBranch.GetLoc(), err
+	// return newBranch.GetLoc(), err
+	return newBranch.KeyChain, err
 }
 
-// func (n Node) NewSiblingBranch(data []byte) (keyChain.Loc, error) {
+// func NewSiblingBranch(n locateable, data []byte) (keyChain.Loc, error) {
 
 // }
 
-// func (n Node) NewSiblingTree(data []byte) (keyChain.Loc, error) {
+// func NewSiblingTree(n locateable, data []byte) (keyChain.Loc, error) {
 
 // }
 
@@ -179,7 +182,7 @@ func (parent Node) NewBranch(data []byte) (keyChain.Loc, error) {
 // bypass this behavior then you can pass in the Node's Record field instead of
 // the Node.  This workaround should be used sparingly so that you don't run
 // into consistency errors and avoid making more database queries than you need.
-func Get(kc keyChain.KeyChain) (Node, error) {
+func Get(kc locateable) (Node, error) {
 	n, err := getNode(kc.GetLoc())
 	if err != nil {
 		fmt.Println("error getting location's node", err)
@@ -191,7 +194,7 @@ func Get(kc keyChain.KeyChain) (Node, error) {
 
 // Gets the calling Node's parent.  Modifications to the returned Node cannot be
 // persisted.
-func GetParent(child keyChain.KeyChain) (Node, error) {
+func GetParent(child locateable) (Node, error) {
 	parent, err := getNode(child.GetParentLoc())
 
 	if err != nil {
@@ -205,7 +208,7 @@ func GetParent(child keyChain.KeyChain) (Node, error) {
 // Gets all of the calling Node's children.  Generally it's better to use
 // the meta version And load a subset of children based on the meta data stored in
 // the Node.  Modifications to the returned nodes cannot be persisted.
-func GetChildren ([]Node, error) {
+func GetChildren(parent locateable) ([]Node, error) {
 	children, err := getNodesFromBucket(parent.GetChildBucket())
 
 	if err != nil {
@@ -217,8 +220,8 @@ func GetChildren ([]Node, error) {
 
 }
 
-func GetSiblings(kc keyChain.KeyChain) ([]Node, error) {
-	siblings, err := getNodesFromBucket(kc.GetSiblingBucket())
+func GetSiblings(l locateable) ([]Node, error) {
+	siblings, err := getNodesFromBucket(l.GetSiblingBucket())
 
 	if err != nil {
 		fmt.Println("error getting sibling nodes: ", err)
@@ -229,9 +232,11 @@ func GetSiblings(kc keyChain.KeyChain) ([]Node, error) {
 }
 
 
-// Gets all forests in the db.  Generally it's better to use the meta version
-// And load a subset of forests based on the meta data stored in the root.
+// Gets all forests in the db.
 // Modifications to the returned forests cannot be persisted.
+// DOES NOT CURRENTLY WORK.  Right now it loads all nodes in the
+//db.  the GetImmediateChildren function is next on the feature list
+//and will fix this
 func GetForests() ([]Node, error) {
 	forests, err := GetChildren(rootNode)
 
@@ -255,13 +260,13 @@ func GetForests() ([]Node, error) {
 // Eventually I'll set it up to only lock individual nodes and only put a read
 // lock on the funnel, but for now this sets up the api and general
 // functionality.
-func OpenUpdate(ls ...locateable) ([]Node, error) {
+func OpenUpdate(kcs ...locateable) ([]Node, error) {
 	funnel.mutex.Lock()
 
-	updateableNodes := make([]Node, len(ls))
+	updateableNodes := make([]Node, len(kcs))
 
-	for i, l := range ls {
-		updateableNode, err := getNodeIntoFunnel(l)
+	for i, kc := range kcs {
+		updateableNode, err := getNodeUpdateable(kc.GetLoc())
 		if err != nil {
 			fmt.Println("error getting updateable Node", err)
 			return updateableNodes, err

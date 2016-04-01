@@ -133,7 +133,7 @@ func clearFunnel() error {
 
 //At somepoint the return from here and the funnel will be put into a trie, but
 //for now I'm sticking with the basics.  Also this function is too long.
-func getNodesFromBucket(bucket keyChain.Loc) ([]Node, error) { 
+func getNodesFromBucket(bucket Keyor) ([]Node, error) { 
 	db, err := leveldb.OpenFile(dbPath, nil)
 	defer db.Close()
 
@@ -144,12 +144,10 @@ func getNodesFromBucket(bucket keyChain.Loc) ([]Node, error) {
 
 	nodes := make([]Node, 0, 10)
 
-	var firstError error = nil
-
 	iter := db.NewIterator(util.BytesPrefix(bucket.Key()), nil)
 
 	for iter.Next() {
-		nodes = append(nodes, Node{})
+		// nodes = append(nodes, Node{})
 
 		nSerial := iter.Value()
 		
@@ -178,7 +176,7 @@ func getNodesFromBucket(bucket keyChain.Loc) ([]Node, error) {
 	return nodes, err
 }
 
-func getNodesFromBucketUpdateable(bucket keyChain.Loc) ([]Node, error) {
+func getNodesFromBucketUpdateable(bucket Keyor) ([]Node, error) {
 	dbNodes, err := getNodesFromBucket(bucket)
 	if err != nil {
 		fmt.Println("error getting nodes from bucket")
@@ -199,7 +197,7 @@ func getNodesFromBucketUpdateable(bucket keyChain.Loc) ([]Node, error) {
 
 //gets from the db.  Note that this will not necesarily be up to date if the
 //funnle has not cleared updates into the db.
-func getNode(l keyChain.Loc) (Node, error) {
+func getNode(l Keyor) (Node, error) {
 	var n Node
 
 	db, err := leveldb.OpenFile(dbPath, nil)
@@ -213,7 +211,8 @@ func getNode(l keyChain.Loc) (Node, error) {
 	nSerial, err := db.Get(l.Key(), nil)
 
 	if err != nil {
-		fmt.Println("Error getting Node from db: ", err)
+		fmt.Println("Error getting Node from db: ", err, 
+			"\nnode Key: ", l.Key())
 		return n, err
 	}
 
@@ -231,7 +230,7 @@ func getNode(l keyChain.Loc) (Node, error) {
 //This allows update functions to behave atomically, without requiring
 //rewriting all of the boilerplate of figuring out whether or not the Node is
 //already in the funnel.  It should not be used outside of this context.
-func getNodeUpdateable(l keyChain.Loc) (Node, error) {
+func getNodeUpdateable(l Keyor) (Node, error) {
 
 	n, isInFunnel := funnel.nodes[l.KeyString()]
 
@@ -273,4 +272,10 @@ func createNode(n Node) error {
 	}
 
 	return nil
+}
+
+func bulkPut(nodes ...Node) {
+	for _, v := range nodes {
+		funnel.nodes[v.KeyString()] = v
+	}
 }

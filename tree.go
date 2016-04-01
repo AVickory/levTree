@@ -41,7 +41,23 @@ can instead put identifying data in the root's child metadata records.
 import (
 	"fmt"
 	"github.com/AVickory/levTree/keyChain"
+	"bytes"
+	"encoding/gob"
 )
+
+type Keyor interface {
+	Key() []byte
+	KeyString() string
+}
+
+type locateable interface {
+	GetLoc() keyChain.Loc
+	GetParentLoc() keyChain.Loc
+	GetChildBucket() keyChain.Loc
+	GetSiblingBucket() keyChain.Loc
+	MakeChildBranch() (keyChain.KeyChain, error)
+	MakeChildTree() (keyChain.KeyChain, error)
+}
 
 //a Record describes a location in the db.
 type Node struct {
@@ -50,7 +66,7 @@ type Node struct {
 }
 
 //Creates a Node whose children will be in the same namespace as this branch.
-func (parent Node) makeBranch(data []byte) (Node, error) {
+func makeBranch(parent locateable, data []byte) (Node, error) {
 	var newBranch Node
 
 	kc, err := parent.MakeChildBranch()
@@ -70,7 +86,7 @@ func (parent Node) makeBranch(data []byte) (Node, error) {
 
 //creates a branch of the parent Node who's children will be in a different
 //namespace than the new branch
-func (parent Node) makeTree(data []byte) (Node, error) {
+func makeTree(parent locateable, data []byte) (Node, error) {
 	var newTree Node
 
 	kc, err := parent.MakeChildTree()
@@ -100,7 +116,7 @@ func (parent Node) makeTree(data []byte) (Node, error) {
 //creates a tree at height 0 attached to the root.  root should be the root of the db.  You could,
 //but shouldn't, pass any other Node to this function
 func makeForest(data []byte) (Node, error) {
-	newForest, err := rootNode.makeTree(data)
+	newForest, err := makeTree(rootNode, data)
 
 	if err != nil {
 		fmt.Println("Error creating template tree: ", err)
@@ -116,12 +132,6 @@ func makeForest(data []byte) (Node, error) {
 // func (n Node) IsForest() bool {
 // 	return n.Height == 0 && n.IsTree()
 // }
-
-func makeRoot() Node {
-	return Node{
-		keyChain.Root,
-	}
-}
 
 func (n *Node) serialize() ([]byte, error) {
 	var gobble bytes.Buffer

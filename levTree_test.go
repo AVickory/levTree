@@ -4,446 +4,221 @@ import (
 	"fmt"
 	"testing"
 	"time"
+	"bytes"
+	// "github.com/AVickory/levTree/keyChain"
 )
 
-func TestForest(t *testing.T) {
+func nodeTest(t *testing.T, data []byte, kc locateable) Node {
+	err := clearFunnel()
+
+	if err != nil {
+		t.Error("error clearing funnel: ", err)
+	}
+
+	n, err := Get(kc)
+
+	if err != nil {
+		t.Error("error getting node from db: ", err)
+	}
+
+	if !n.GetLoc().Equal(kc.GetLoc()) {
+		t.Error("node was saved with wrong location", 
+			"\n expected: ", kc,
+			"\n found: ", n.KeyChain)
+	}
+
+	if !bytes.Equal(n.Data, data) {
+		t.Error("node was saved with wrong data",
+			"\nexpected: ", data,
+			"\nfound: ", n.Data)
+	}
+
+	return n
+}
+
+func forestTest (t *testing.T, data []byte) Node {
+	forestKc, err := NewForest(data)
+
+	if err != nil {
+		t.Error("error making new forest: ", err)
+	}
+
+	return nodeTest(t, data, forestKc)
+}
+
+func treeTest (t *testing.T, parent Node, data []byte) Node {
+	treeKc, err := NewTree(parent, data)
+
+	if err != nil {
+		t.Error("error making new tree: ", err)
+	}
+
+	return nodeTest(t, data, treeKc)
+}
+
+func branchTest (t *testing.T, parent Node, data []byte) Node {
+	branchKc, err := NewBranch(parent, data)
+
+	if err != nil {
+		t.Error("error making new branch: ", err)
+	}
+
+	return nodeTest(t, data, branchKc)
+}
+
+func TestNew (t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
 		t.Error("error initializing db: ", err)
 	}
 
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+	f0 := forestTest(t, []byte{0})
 
-	if err != nil {
-		t.Error("error writing forest (to funnel): ", err)
-	}
+	_ = forestTest(t, []byte{1})
 
-	err = NewForest(convertNumToUpdater(3), convertNumToUpdater(4))
+	t0 := treeTest(t, f0, []byte{2})
 
-	if err != nil {
-		t.Error("error writing forest (to funnel): ", err)
-	}
+	_ = treeTest(t, f0, []byte{3})
 
-	err = clearFunnel() //both forests are now in db
+	b0 := branchTest(t, f0, []byte{4})
 
-	if err != nil {
-		t.Error("error writing forests (to disk): ", err)
-	}
+	_ = branchTest(t, f0, []byte{5})
 
-	forestsMeta, err := GetForestsMeta()
+	_ = branchTest(t, t0, []byte{6})
 
-	if err != nil {
-		t.Error("error getting forest meta from root: ", err)
-	}
+	_ = branchTest(t, t0, []byte{7})
 
-	forests, err := GetForests()
+	_ = branchTest(t, b0, []byte{8})
 
-	if err != nil {
-		t.Error("error getting forests", err)
-	}
-
-	if len(forestsMeta) != 2 {
-		t.Error("too much meta data in root: ", len(forestsMeta))
-	}
-
-	if len(forests) != 2 {
-		fmt.Println(forests)
-		t.Error("too many forests: ", len(forests))
-	}
-
-	foundData := make(map[string]bool)
-
-	for _, n := range forests {
-
-		if n.Parent.Data != forestsMeta[n.KeyString()].Data {
-			t.Error("Metadata was not stored differently in root and forest")
-		}
-
-		expectedData, _ := n.Parent.Data.(mockUpdateable)
-
-		expectedData += 1
-
-		if n.Data != convertNumToUpdater(int(expectedData)) {
-			t.Error("Wrong data stored in record with parentMeta: ", n.Parent.Data)
-		}
-
-		foundData[n.KeyString()] = true
-
-	}
-
-	if len(foundData) != 2 {
-		t.Error("Not all forests were saved!")
-	}
-
-	if forests[0].Data == forests[1].Data {
-		t.Error("one forest was saved at both locations!")
-	}
+	_ = branchTest(t, b0, []byte{9})
 
 }
 
-// err = UpdateNodeData(n, 1)
+func getParentTest (t *testing.T, parent Node, child Node) {
+	foundParent, err := GetParent(child)
 
-// if err != nil {
-// 	t.Error("error updating funnel node", err)
-// }
+	if err != nil {
+		t.Error("error getting parent: ", err)
+	}
 
-// err = clearFunnel()
+	if !bytes.Equal(foundParent.Data, parent.Data) {
+		t.Error("parent data was not on the node retrieved from database",
+			"\nexpected: ", parent.Data,
+			"\nfound: ", foundParent.Data)
+	}
+}
 
-// if err != nil {
-// 	t.Error("error writing node to disk", err)
-// }
+func rangeSearchTest(t *testing.T, parent Node, nodes []Node, numExpected int) {
+	if len(nodes) != numExpected {
+		nodesData := make([]byte, 0, len(nodes))
+		for _, v := range nodes {
+			nodesData = append(nodesData, v.Data[0])
+		}
+		t.Error("wrong number of nodes",
+			"\nparent data: ", parent.Data[0],
+			"\nexpected: ", numExpected,
+			"\nfound: ", len(nodes),
+			"\nfound data: ", nodesData)
+	}
+}
 
-// updatedN, err := Get(n.Record)
+func getChildrenTest (t *testing.T, parent Node, numChildren int) {
+	children, err := GetChildren(parent)
 
-// if err != nil {
-// 	t.Error("error getting node from disk", err)
-// }
+	if err != nil {
+		t.Error("error getting children: ", err)
+	}
 
-// if updatedN.Data == n.Data {
-// 	t.Error("error updating forest data")
-// }
+	rangeSearchTest(t, parent, children, numChildren)
+}
 
-func TestNewTree(t *testing.T) {
+func getSiblingsTest (t *testing.T, n Node, numSiblings int) {
+	siblings, err := GetSiblings(n)
+
+	if err != nil {
+		t.Error("error getting siblings: ", err)
+	}
+
+	rangeSearchTest(t, n, siblings, numSiblings)
+}
+
+func getForestsTest(t *testing.T, numForests int) {
+	forests, err := GetForests()
+
+	if err != nil {
+		t.Error("error getting forests: ", err)
+	}
+
+	rangeSearchTest(t, rootNode, forests, numForests)
+}
+
+//This test will fail until I get the immediate children search set up
+func TestGet (t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
 		t.Error("error initializing db: ", err)
 	}
 
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+	f0 := forestTest(t, []byte{0})
 
-	if err != nil {
-		t.Error("error putting forest in funnel: ", err)
-	}
+	_ = forestTest(t, []byte{1})
 
-	err = clearFunnel()
+	t0 := treeTest(t, f0, []byte{2})
 
-	if err != nil {
-		t.Error("error saving forest to disk", err)
-	}
+	_ = treeTest(t, f0, []byte{3})
 
-	forests, err := GetForests()
-	forest := forests[0]
-	if err != nil {
-		t.Error("error getting forest from db")
-	}
+	b0 := branchTest(t, f0, []byte{4})
 
-	err = NewTree(forest, convertNumToUpdater(3), convertNumToUpdater(4))
+	_ = branchTest(t, f0, []byte{5})
 
-	if err != nil {
-		t.Error("error putting tree in funnel: ", err)
-	}
+	_ = branchTest(t, t0, []byte{6})
 
-	err = NewTree(forest, convertNumToUpdater(5), convertNumToUpdater(6))
+	_ = branchTest(t, t0, []byte{7})
 
-	if err != nil {
-		t.Error("error putting tree in funnel: ", err)
-	}
+	b1 := branchTest(t, b0, []byte{8})
 
-	err = clearFunnel()
+	_ = branchTest(t, b0, []byte{9})
 
-	if err != nil {
-		t.Error("error saving trees to disk", err)
-	}
+	b2 := branchTest(t, b1, []byte{8})
 
-	firstTrees, err := GetChildren(forest.Record)
-	//the get(node.Record) syntax guarantees the most up to date version of a
-	//given node *that is on the database* since we're using the clearFunnel
-	//function outside of the funnel, we need to use this to get at and check
-	//the actual saved data.  clearFunnel is deliberately not part of the api
-	//because opening a transaction when one is open causes an error instead of
-	//blocking, so sequential transactions can't really be done concurrently.
-	//  This method of getting updated records immediately to and then from the
-	//db is only meant for testing and if initDb has been called then it can
-	//cause errors that are not easily caught both in your code and in the
-	//funnel.
-	//getForests and getForestsMeta always use this syntax (without
-	//clearFunnel) which is why it didn't show up in the last test function.
+	_ = branchTest(t, b1, []byte{9})
 
-	if err != nil {
-		t.Error("error loading trees", err)
-	}
+	getParentTest(t, f0, t0)
 
-	var parentTree Node
+	getParentTest(t, f0, b0)
 
-	for _, v := range firstTrees {
-		if v.Data == convertNumToUpdater(6) {
-			parentTree = v
-		}
-	}
+	getParentTest(t, b0, b1)
 
-	err = NewTree(parentTree, convertNumToUpdater(7), convertNumToUpdater(8))
+	getParentTest(t, b1, b2)
 
-	if err != nil {
-		t.Error("error putting tree in funnel: ", err)
-	}
+	//trees may be one to high after keyChain update
+	getChildrenTest(t, rootNode, 2) //2 immediate
 
-	clearFunnel()
+	getChildrenTest(t, f0, 4) //4 immediate
 
-	forest, err = Get(forest.Record)
+	getChildrenTest(t, t0, 2) //2 immediate
 
-	if err != nil {
-		t.Error("error loading updated forest", err)
-	}
+	getChildrenTest(t, b0, 2) //2 immediate
 
-	trees, err := GetChildren(forest)
+	getChildrenTest(t, b1, 2) //2 immediate
 
-	if err != nil {
-		t.Error("error getting updated first level trees", err)
-	}
+	getChildrenTest(t, b2, 0) //no immediate
 
-	var updatedParentTree Node
 
-	var notParentTree Node
+	getSiblingsTest(t, f0, 1) // this really should be 1
 
-	for _, v := range trees {
-		if v.Data == convertNumToUpdater(6) {
-			updatedParentTree = v
-		} else {
-			notParentTree = v
-		}
-	}
+	getSiblingsTest(t, t0, 4) // should be 4.  finds parent if parent is tree and finds descendants of all siblings
 
-	tempTreeList, err := GetChildren(updatedParentTree.Record)
+	getSiblingsTest(t, b0, 4) // should be 4.  
 
-	if err != nil {
-		t.Error("error getting second level tree", err)
-	}
+	getSiblingsTest(t, b1, 2) // self and sibling
 
-	childTree := tempTreeList[0]
+	getSiblingsTest(t, b2, 2) // self and sibling
 
-	if !forest.Loc.Equal(updatedParentTree.Parent.Loc) {
-		t.Error("parent tree's parent is not forest")
-	}
 
-	if !forest.Children[updatedParentTree.KeyString()].Loc.Equal(updatedParentTree.Loc) {
-		t.Error("forest does not have parent tree as child")
-	}
-
-	if !forest.Loc.Equal(notParentTree.Parent.Loc) {
-		t.Error("parent tree's parent is not forest")
-	}
-
-	if !forest.Children[notParentTree.KeyString()].Loc.Equal(notParentTree.Loc) {
-		t.Error("forest does not have parent tree as child")
-	}
-
-	if !childTree.Parent.Loc.Equal(updatedParentTree.Loc) {
-		t.Error("child does not have the right data for it's parent")
-	}
-
-	if !updatedParentTree.Children[childTree.KeyString()].Loc.Equal(childTree.Loc) {
-		t.Error("parent does not have right data for child")
-	}
-
-	if !updatedParentTree.Children[childTree.KeyString()].Loc.Equal(childTree.Loc) {
-		t.Error("parent does not have the right data for it's child")
-	}
-
-}
-
-func TestNewBranch(t *testing.T) {
-	err := initForSynchronousTests()
-
-	if err != nil {
-		t.Error("error initializing database", err)
-	}
-
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
-
-	if err != nil {
-		t.Error("error making new forest", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing forest to disk")
-	}
-
-	forestList, err := GetForests() //could have used meta version, but there
-	//would have been an extra step to extract the forest
-	forest := forestList[0]
-
-	if err != nil {
-		t.Error("error getting forests from disk", err)
-	}
-
-	err = NewTree(forest, convertNumToUpdater(3), convertNumToUpdater(4))
-
-	if err != nil {
-		t.Error("error making new tree", err)
-	}
-
-	err = NewBranch(forest, convertNumToUpdater(5), convertNumToUpdater(6))
-
-	if err != nil {
-		t.Error("error making new branch", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing forest children", err)
-	}
-
-	forestChildren, err := GetChildren(forest.Record)
-
-	if err != nil {
-		t.Error("error getting forest children", err)
-	}
-
-	var tree Node
-	var branch Node
-
-	for _, v := range forestChildren {
-		if v.Data == convertNumToUpdater(4) {
-			tree = v
-		} else if v.Data == convertNumToUpdater(6) {
-			branch = v
-		}
-	}
-
-	err = NewBranch(tree, convertNumToUpdater(7), convertNumToUpdater(8))
-
-	if err != nil {
-		t.Error("error making tree branch", err)
-	}
-
-	err = NewBranch(branch, convertNumToUpdater(9), convertNumToUpdater(10))
-
-	if err != nil {
-		t.Error("error making branch branch", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing branches", err)
-	}
-
-	forest, err = Get(forest.Record)
-
-	if err != nil {
-		t.Error("error getting forest")
-	}
-
-	tree, err = Get(tree.Record)
-
-	if err != nil {
-		t.Error("error getting updated tree")
-	}
-
-	treeChildList, err := GetChildren(tree)
-
-	if err != nil {
-		t.Error("error getting tree child")
-	}
-	treeChild := treeChildList[0]
-
-	branch, err = Get(branch.Record)
-
-	branchChildList, err := GetChildren(branch)
-
-	if err != nil {
-		t.Error("error getting branch child")
-	}
-	branchChild := branchChildList[0]
-
-	if !forest.Children[branch.KeyString()].Loc.Equal(branch.Loc) {
-		t.Error("forest has incorrect child data")
-	}
-
-	if !branch.Parent.Loc.Equal(forest.Loc) {
-		t.Error("parent branch has incorrect parent data")
-	}
-
-	if !tree.Children[treeChild.KeyString()].Loc.Equal(treeChild.Loc) {
-		t.Error("tree has incorrect child data")
-	}
-
-	if !treeChild.Parent.Loc.Equal(tree.Loc) {
-		t.Error("tree child has incorrect parent data")
-	}
-
-	if !branch.Children[branchChild.KeyString()].Loc.Equal(branchChild.Loc) {
-		t.Error("parent branch has incorrect child data")
-	}
-
-	if !branchChild.Parent.Loc.Equal(branch.Loc) {
-		t.Error("branch child has incorrect parent data")
-	}
-
-}
-
-//used Get and Get children in the TestNew functions.  so just these two get
-//their own test function.
-func TestGetParent (t *testing.T) {
-	err := initForSynchronousTests()
-
-	if err != nil {
-		t.Error("error initializing database", err)
-	}
-
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
-
-	if err != nil {
-		t.Error("error making new forest", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing forest to disk")
-	}
-
-	forestList, err := GetForests() //could have used meta version, but there
-	//would have been an extra step to extract the forest
-	forest := forestList[0]
-
-	if err != nil {
-		t.Error("error getting forests from disk", err)
-	}
-
-	err = NewBranch(forest, convertNumToUpdater(3), convertNumToUpdater(4))
-
-	if err != nil {
-		t.Error("error making new branch", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing branch to disk", err)
-	}
-
-	branchList, err := GetChildren(forest.Record)
-
-	if err != nil {
-		t.Error("error getting branch from disk", err)
-	}
-	branch := branchList[0]
-
-	updatedForestMeta, err := GetParentMeta(branch.Record)
-
-	if err != nil {
-		t.Error("error getting forest metadata from disk", err)
-	}
-
-	if updatedForestMeta.Data != convertNumToUpdater(3) {
-		t.Error("got wrong metadata")
-	}
-
-	updatedForest, err := GetParent(branch.Record)
-
-	if err != nil {
-		t.Error("error reloading forest", err)
-	}
-
-	if updatedForest.Data != convertNumToUpdater(2) {
-		t.Error("parent node's data is wrong")
-	}
+	getForestsTest(t, 12)
 
 }
 
@@ -451,98 +226,85 @@ func TestUpdate (t *testing.T) {
 	err := initForSynchronousTests()
 
 	if err != nil {
-		t.Error("error initializing db", err)
-	}
-
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
-
-	if err != nil {
-		t.Error("error putting forest in funnel", err)
-	}
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing forest to disk")
-	}
-
-	forestList, err := GetForests()
-
-	if err != nil {
-		t.Error("error getting forest")
-	}
-	forest := forestList[0]
-
-	nodes, err := OpenUpdate(forest)
-
-	if err != nil {
-		t.Error("error getting node into funnel for update: ", err)
-	}
-	n := nodes[0]
-	if n.Data != convertNumToUpdater(2) {
-		t.Error("node data was incorrect")
-	}
-	if n.Parent.Data != convertNumToUpdater(1) {
-		t.Error("node's parent metadata was incorrect")
-	}
-
-	n.Data = convertNumToUpdater(3)
-
-	CloseUpdate(n)
-
-	err = clearFunnel()
-
-	if err != nil {
-		t.Error("error writing updated node to disk", err)
-	}
-
-	forestList, err = GetForests()
-
-	if err != nil {
-		t.Error("error getting forest", err)
-	}
-	updatedForest := forestList[0];
-
-
-	if updatedForest.Data != convertNumToUpdater(3) {
-		t.Error("updated data not saved to disk")
-	}
-
-	if updatedForest.Parent.Data != convertNumToUpdater(1) {
-		t.Error("unchanged data in the updated node has been altered")
-	}
-}
-
-func TestAsync (t *testing.T) {
-	err := clearDb()
-
-	if err != nil {
-		t.Error("error clearing db: ", err)
-	}
-
-	err = InitDb("./data/db", 10 * time.Millisecond)
-
-	if err != nil {
 		t.Error("error initializing db: ", err)
 	}
 
-	err = NewForest(convertNumToUpdater(1), convertNumToUpdater(2))
+	f0 := forestTest(t, []byte{0})
+
+	_ = forestTest(t, []byte{1})
+
+	t0 := treeTest(t, f0, []byte{2})
+
+	_ = treeTest(t, f0, []byte{3})
+
+	_ = branchTest(t, f0, []byte{4}) //this used to be b0
+
+	_ = branchTest(t, f0, []byte{5})
+
+	b0 := branchTest(t, t0, []byte{6}) //now this one is b0.  this is to ensure consistent ordering.
+
+	_ = branchTest(t, t0, []byte{7})
+
+	b1 := branchTest(t, b0, []byte{8})
+
+	_ = branchTest(t, b0, []byte{9})
+
+	b2 := branchTest(t, b1, []byte{8})
+
+	_ = branchTest(t, b1, []byte{9})
+
+
+	initialNodes := []locateable{f0, t0, b0, b1, b2}
+
+	nodesToUpdate, err := OpenUpdate(initialNodes...)
 
 	if err != nil {
-		t.Error("error making new forest", err)
+		t.Error("error opening update: ", err)
 	}
 
-	time.Sleep(20 * time.Millisecond)
+	if len(nodesToUpdate) != len(initialNodes) {
+		t.Error("open update did not return the right number of nodes: ", len(nodesToUpdate))
+	}
 
-	forestList, err := GetForests()
+	for i, v := range initialNodes {
+		initial, _ := v.(Node)
+		toUpdate := nodesToUpdate[i]
+		if toUpdate.Data[0] != initial.Data[0] {
+			t.Error("something went wrong getting the node/putting it in the funnel",
+				"\nexpected: ", initial.Data[0],
+				"\nfound: ", toUpdate.Data[0])
+		}
+		toUpdate.Data[0]++
+		if toUpdate.Data[0] == initial.Data[0] {
+			t.Error("changing the updateable should not change the original (because the updateable should be either the version already in the funnel or from the db.)",
+				"\nexpected: ", initial.Data[0] + 1,
+				"\nfound: ", toUpdate.Data[0])
+		}
+	}
+
+	CloseUpdate(nodesToUpdate...)
+
+	InitDb("./data/db", 10 * time.Millisecond)
+
+	time.Sleep(waitBetweenWrites * 2)
 
 	if err != nil {
-		t.Error("error getting forest", err)
+		t.Error("error clearing funnel: ", err)
 	}
-	forest := forestList[0]
 
-	if forest.Data != convertNumToUpdater(2) {
-		t.Error("forest not saved correctly")
+	for i, v := range initialNodes {
+		updatedNode, err := Get(v)
+
+		if err != nil {
+			t.Error("error getting node.  original data was: ", v.(Node).Data)
+		}
+
+		if updatedNode.Data[0] != nodesToUpdate[i].Data[0] {
+			t.Error("db was not updataed for node with original data: ", v.(Node).Data)
+		}
 	}
+
+	fmt.Println("herpderp")
+
 
 }
