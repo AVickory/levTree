@@ -17,7 +17,8 @@ func init () {
 	}
 
 	Root = KeyChain{
-		NameSpace: rootLoc,
+		NameSpace: Loc{},
 		Id: rootId,
+		IsTree: true,
 	}
 }

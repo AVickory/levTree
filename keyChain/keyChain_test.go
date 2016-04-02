@@ -3,6 +3,7 @@ package keyChain
 import (
 	"bytes"
 	"testing"
+	"fmt"
 )
 
 // func testChildTree(t *testing.T, child KeyChain, parent KeyChain) {
@@ -23,6 +24,14 @@ import (
 // 	}
 // }
 
+var dbm bool = false
+
+func debug(stuff ...interface{}) {
+	if dbm {
+		fmt.Println(stuff...)
+	}
+}
+
 func TestMakeTreeKeyChainRoot (t *testing.T) {
 	tree, err := Root.MakeChildTree()
 
@@ -32,18 +41,40 @@ func TestMakeTreeKeyChainRoot (t *testing.T) {
 
 	tId := tree.Id
 
-	if tree.GetLoc().Equal(rootLoc) {
-		t.Error("tree's self is equal to root location: ", tree.GetLoc())
-	}
-
 	if tId.Height != 1 {
 		t.Error("something went wrong making the tree's Id: ", tId)
 	}
 
-	if !tree.GetLoc().Equal(tree.GetChildBucket()) {
-		t.Error("tree's self and ChildBucket should have been the same: ", 
-			"\nself: ", tree.GetLoc(),
-			"\nchildBucket: ", tree.GetChildBucket())
+	expectedLoc := Loc{rootId, rootId, tId,}
+
+	if !tree.GetLoc().Equal(expectedLoc) {
+		t.Error("tree has wrong location",
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", tree.GetLoc())
+	}
+
+	expectedChildBucket := Loc{rootId, tId, tId}
+
+	if !tree.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("tree has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", tree.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket[:2]
+
+	if !tree.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("tree has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", tree.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:2]
+
+	if !tree.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("tree has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", tree.GetSiblingBucket())		
 	}
 
 	if !tree.GetParentLoc().Equal(rootLoc) {
@@ -59,6 +90,8 @@ func TestMakeTreeKeyChainOnTree (t *testing.T) {
 		t.Error("error making parent: ", err)
 	}
 
+	pId := parent.Id
+
 	child, err := parent.MakeChildTree()
 
 	if err != nil {
@@ -67,22 +100,46 @@ func TestMakeTreeKeyChainOnTree (t *testing.T) {
 
 	cId := child.Id
 
-	if child.GetLoc().Equal(parent.GetLoc()) {
-		t.Error("tree's self is equal to root location: ", child.GetLoc())
-	}
-
 	if cId.Height != 2 {
 		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if !child.GetLoc().Equal(child.GetChildBucket()) {
-		t.Error("tree's self and ChildBucket should have been the same: ", 
-			"\nself: ", child.GetLoc(),
-			"\nchildBucket: ", child.GetChildBucket())
+	expectedLoc := Loc{rootId, pId, pId, cId,}
+
+	if !child.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", child.GetLoc())
+	}
+
+	expectedChildBucket := Loc{rootId, pId, cId, cId}
+
+	if !child.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("child has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", child.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket[:3]
+
+	if !child.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("child has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", child.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:3]
+
+	if !child.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("child has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", child.GetSiblingBucket())		
 	}
 
 	if !child.GetParentLoc().Equal(parent.GetLoc()) {
-		t.Error("tree's parent should have been equal to parent Location \nchild: ", child.GetParentLoc(), "\nparent: ", parent.GetLoc())
+		t.Error("child's parent should have been equal to parent Location", 
+			"\nchild: ", child.GetParentLoc(), 
+			"\nparent: ", parent.GetLoc())
 	}
 }
 
@@ -93,23 +150,48 @@ func TestMakeBranchKeyChainRoot (t *testing.T) {
 		t.Error("error making branch: ", err)
 	}
 
-	if branch.GetLoc().Equal(rootLoc){
-		t.Error("branch's self was equal to rootLoc: ", branch.GetLoc())
+	cId := branch.Id
+
+	if cId.Height != 1 {
+		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if bId := branch.Id; bId.Height != 1 {
-		t.Error("branch's Id was set incorrectly: ", branch.GetLoc())
+	expectedLoc := Loc{rootId, rootId, cId,}
+
+	if !branch.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", branch.GetLoc())
 	}
 
-	if !branch.GetChildBucket().Equal(rootLoc.copyAndAppend(branch.Id)) {
-		t.Error("branch's child bucket should have been it's parent's self plus the branch's Id: ", branch.GetChildBucket())
+	expectedChildBucket := Loc{rootId, cId}
+
+	if !branch.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("branch has wrong branch prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", branch.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket //not all descendants of a branch are in the same bucket
+
+	if !branch.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("branch has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", branch.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:2]
+
+	if !branch.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("branch has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", branch.GetSiblingBucket())		
 	}
 
 	if !branch.GetParentLoc().Equal(rootLoc) {
-		t.Error("branch's parent was not equal to it's parent's self: ", 
-			"\nbranch: ", branch, 
-			"\nbranch ParentLoc: ", branch.GetParentLoc(),
-			"\nparent: ", Root)
+		t.Error("branch's parent should have been equal to parent Location", 
+			"\nchild: ", branch.GetParentLoc(), 
+			"\nparent: ", rootLoc)
 	}
 
 }
@@ -121,6 +203,8 @@ func TestMakeBranchKeyChainOnTree (t *testing.T) {
 		t.Error("error making parent: ", err)
 	}
 
+	pId := parent.Id
+
 	child, err := parent.MakeChildBranch()
 
 	if err != nil {
@@ -130,21 +214,45 @@ func TestMakeBranchKeyChainOnTree (t *testing.T) {
 	cId := child.Id
 
 	if cId.Height != 2 {
-		t.Error("something went wrong making the branch's Id: ", cId)
+		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if child.GetLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's self was equal to rootLoc: ", child.GetLoc())
+	expectedLoc := Loc{rootId, pId, pId, cId,}
+
+	if !child.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", child.GetLoc())
 	}
 
-	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
-		t.Error("branch's Child Bucket should be parent's Loc plus branch's ID: ", 
-			"\nparent: ", parent.GetChildBucket(),
-			"\nchild: ", child.GetChildBucket())
+	expectedChildBucket := Loc{rootId, pId, cId}
+
+	if !child.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("child has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", child.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket
+
+	if !child.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("child has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", child.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:3]
+
+	if !child.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("child has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", child.GetSiblingBucket())		
 	}
 
 	if !child.GetParentLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
+		t.Error("child's parent should have been equal to parent Location", 
+			"\nchild: ", child.GetParentLoc(), 
+			"\nparent: ", parent.GetLoc())
 	}
 
 }
@@ -156,6 +264,8 @@ func TestMakeBranchKeyChainOnBranch (t *testing.T) {
 		t.Error("error making branch")
 	}
 
+	pId := parent.Id
+
 	child, err := parent.MakeChildBranch()
 
 	if err != nil {
@@ -165,21 +275,45 @@ func TestMakeBranchKeyChainOnBranch (t *testing.T) {
 	cId := child.Id
 
 	if cId.Height != 2 {
-		t.Error("something went wrong making the branch's Id: ", cId)
+		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if child.GetLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's self was equal to parent's self: ", child.GetLoc())
+	expectedLoc := Loc{rootId, pId, cId,}
+
+	if !child.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", child.GetLoc())
 	}
 
-	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
-		t.Error("branch's Child Bucket should be parent's NameSpace plus branch's ID: ", 
-			"\nparent: ", parent.GetChildBucket(),
-			"\nchild: ", child.GetChildBucket())
+	expectedChildBucket := Loc{rootId, cId,}
+
+	if !child.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("child has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", child.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket
+
+	if !child.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("child has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", child.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:2]
+
+	if !child.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("child has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", child.GetSiblingBucket())		
 	}
 
 	if !child.GetParentLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
+		t.Error("child's parent should have been equal to parent Location", 
+			"\nchild: ", child.GetParentLoc(), 
+			"\nparent: ", parent.GetLoc())
 	}
 
 }
@@ -197,6 +331,8 @@ func TestMakeBranchKeyChainOnBranchOnBranch (t *testing.T) {
 		t.Error("error making branch")
 	}
 
+	pId := parent.Id
+
 	child, err := parent.MakeChildBranch()
 
 	if err != nil {
@@ -206,21 +342,45 @@ func TestMakeBranchKeyChainOnBranchOnBranch (t *testing.T) {
 	cId := child.Id
 
 	if cId.Height != 3 {
-		t.Error("something went wrong making the branch's Id: ", cId)
+		t.Error("something went wrong making the tree's Id: ", cId)
 	}
 
-	if child.GetLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's self was equal to parent's self: ", child.GetLoc())
+	expectedLoc := Loc{rootId, pId, cId,}
+
+	if !child.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", child.GetLoc())
 	}
 
-	if !child.GetChildBucket().Equal(parent.NameSpace.copyAndAppend(child.Id)) {
-		t.Error("branch's Child Bucket should be parent's NameSpace plus branch's ID: ", 
-			"\nparent: ", parent.GetChildBucket(),
-			"\nchild: ", child.GetChildBucket())
+	expectedChildBucket := Loc{rootId, cId,}
+
+	if !child.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("child has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", child.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket
+
+	if !child.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("child has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", child.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:2]
+
+	if !child.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("child has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", child.GetSiblingBucket())		
 	}
 
 	if !child.GetParentLoc().Equal(parent.GetLoc()) {
-		t.Error("branch's parent should have been equal to parent's self: ", child.GetParentLoc())
+		t.Error("child's parent should have been equal to parent Location", 
+			"\nchild: ", child.GetParentLoc(), 
+			"\nparent: ", parent.GetLoc())
 	}
 
 }
@@ -232,63 +392,100 @@ func TestMakeSiblingTree (t *testing.T) {
 		t.Error("error making tree1: ", err)
 	}
 
-	tree2, err := tree1.MakeSibling()
+	tId := tree1.Id
 
+	tree2, err := tree1.MakeSibling()
+	
 	if err != nil {
 		t.Error("error making sibling tree: ", err)
 	}
 
+	sId := tree2.Id
+
+	if sId.Equal(tId) {
+		t.Error("sibling has same id as original")
+	}
+
+	if sId.Height != 1 {
+		t.Error("something went wrong making the tree's Id: ", sId)
+	}
+
+	expectedLoc := Loc{rootId, rootId, sId}
+
+	if !tree2.GetLoc().Equal(expectedLoc) {
+		t.Error("tree's self is equal to root location", 
+			"\nexpected: ", expectedLoc,
+			"\ncomputed: ", tree2.GetLoc())
+	}
+
+	expectedChildBucket := Loc{rootId, sId, sId}
+
+	if !tree2.GetChildBucket().Equal(expectedChildBucket) {
+		t.Error("child has wrong child prefix",
+			"\nexpected: ", expectedChildBucket,
+			"\ncomputed: ", tree2.GetChildBucket())	
+	}
+
+	expectedDescendantBucket := expectedChildBucket[:2]
+
+	if !tree2.GetDescendantBucket().Equal(expectedDescendantBucket) {
+		t.Error("child has wrong descendant prefix",
+			"\nexpected: ", expectedDescendantBucket,
+			"\ncomputed: ", tree2.GetDescendantBucket())	
+	}
+
+	expectedSiblingBucket := expectedLoc[:2]
+
+	if !tree2.GetSiblingBucket().Equal(expectedSiblingBucket) {
+		t.Error("child has wrong sibling prefix",
+			"\nexpected: ", expectedSiblingBucket,
+			"\ncomputed: ", tree2.GetSiblingBucket())		
+	}
+
 	if !tree2.GetParentLoc().Equal(Root.GetLoc()) {
-		t.Error("sibling should have had same parent as original")
+		t.Error("child's parent should have been equal to parent Location", 
+			"\nchild: ", tree2.GetParentLoc(),
+			"\nparent: ", Root.GetLoc())
 	}
 
-	if !tree1.GetSiblingBucket().Equal(tree2.GetSiblingBucket()) {
-		t.Error("sibling trees sibling buckets are not the same", 
-			"\ntree1: ", tree1,//.GetSiblingBucket(),
-			"\ntree2: ", tree2,//.GetSiblingBucket(),)
-			)
-	}
 
-	if !tree2.GetSiblingBucket().Equal(Root.GetChildBucket()) {
-		t.Error("sibling tree's sibling bucket is not the parent's child bucket")
-	}
 }
 
 func TestMakeSiblingBranch (t *testing.T) {
 	branch1, err := Root.MakeChildBranch()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making branch: ", err)
 	}
 
 	branch2, err := branch1.MakeChildBranch()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making branch: ", err)
 	}
 
 	branch3, err := branch2.MakeChildBranch()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making branch: ", err)
 	}
 
 	branch1S, err := branch1.MakeSibling()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making sibling: ", err)
 	}
 
 	branch2S, err := branch2.MakeSibling()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making sibling: ", err)
 	}
 
 	branch3S, err := branch3.MakeSibling()
 
 	if err != nil {
-		t.Error("error making branch")
+		t.Error("error making sibling: ", err)
 	}
 
 	if !branch1S.GetParentLoc().Equal(Root.GetLoc()) {
@@ -329,7 +526,7 @@ func TestIsTree (t *testing.T) {
 		t.Error("error making tree: ", err)
 	}
 
-	treeIsTree := tree.IsTree()
+	treeIsTree := tree.IsTree
 
 	if !treeIsTree {
 		t.Error("tree is not a tree: ", tree)
@@ -341,7 +538,7 @@ func TestIsTree (t *testing.T) {
 		t.Error("error making branch: ", err)
 	}
 
-	branchIsTree := branch.IsTree()
+	branchIsTree := branch.IsTree
 
 	if branchIsTree {
 		t.Error("branch is a tree: ", branch)
@@ -413,6 +610,14 @@ func TestPassThroughFunctions (t *testing.T) {
 
 	if !bytes.Equal(parent.ChildKeyPrefix(), child.GetLoc()[:len(child.GetLoc()) - 1].Key()) {
 		t.Error("child's key does not have parent's child prefix")
+	}
+
+	if !bytes.Equal(child.SiblingKeyPrefix(), parent.ChildKeyPrefix()) {
+		t.Error("child's sibling prefix is not parent's ChildKeyPrefix")
+	}
+
+	if !bytes.Equal(parent.SiblingKeyPrefix(), Root.ChildKeyPrefix()) {
+		t.Error("parent's sibling prefix is not root's ChildKeyPrefix")
 	}
 
 	if child.KeyString() != child.GetLoc().KeyString() {
