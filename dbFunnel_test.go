@@ -251,37 +251,36 @@ func TestChildSearch (t *testing.T) {
 	// fmt.Println("rootNode: ")
 	// t.Error("rootNode: ")
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, rootNode, len(nodes)) // all nodes plus
-
 	// fmt.Println("\n\nforest:")
-	// t.Error("\n\nforest:")
-	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["forest"], len(nodes)) //all but itself
+	// t.Error("forest:")
+	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["forest"], 4) //all but itself
 
 	// fmt.Println("\n\ntree1:")
-	// t.Error("\n\ntree1:")
-	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree1"], 2) //tree1 and tree11
+	// t.Error("tree1:")
+	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree1"], 1) //tree1 and tree11
 
 	// fmt.Println("\n\ntree2:")
-	// t.Error("\n\ntree2:")
-	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree2"], 1) //tree2
+	// t.Error("tree2:")
+	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree2"], 0) //tree2
 
 	// fmt.Println("\n\ntree11:")
-	// t.Error("\n\ntree11:")
-	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree11"], 1) //tree11
+	// t.Error("tree11:")
+	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["tree11"], 0) //tree11
 
 	// fmt.Println("\n\nbranch2:")
-	// t.Error("\n\nbranch2:")
+	// t.Error("branch2:")
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["branch2"], 0)
 
 	// fmt.Println("\n\nbranch1:")
-	// t.Error("\n\nbranch1:")
+	// t.Error("branch1:")
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["branch1"], 2) //branch11 and branch12
 
 	// fmt.Println("\n\nbranch11:")
-	// t.Error("\n\nbranch11:")
+	// t.Error("branch11:")
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["branch11"], 1) //branch111
 
 	// fmt.Println("\n\nbranch12:")
-	// t.Error("\n\nbranch12:")
+	// t.Error("branch12:")
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["branch12"], 0)
 
 	_ = checkNumChildrenAbsentFromSearch(t, nodes, nodes["branch111"], 0)
@@ -358,10 +357,10 @@ func TestBulkPut (t *testing.T) {
 	savedNodes, err := getNodesFromBucket(nodes[0].GetChildBucket())
 
 	for i, v := range savedNodes {
-		if !bytes.Equal(v.Data, []byte{byte(i)}) {
+		if !bytes.Equal(v.Data, []byte{byte(i+1)}) {
 			t.Error("node not saved correctly", 
 				"\nindex: ", i,
-				"\nnode: ", v)
+				"\nnode: ", v.Data)
 		}
 	}
 

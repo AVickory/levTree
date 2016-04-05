@@ -8,6 +8,14 @@ import (
 	// "github.com/AVickory/levTree/keyChain"
 )
 
+var dbm bool = false
+
+func debug(stuff ...interface{}) {
+	if dbm {
+		fmt.Println(stuff...)
+	}
+}
+
 func nodeTest(t *testing.T, data []byte, kc locateable) Node {
 	err := clearFunnel()
 
@@ -116,7 +124,7 @@ func rangeSearchTest(t *testing.T, parent Node, nodes []Node, numExpected int) {
 			nodesData = append(nodesData, v.Data[0])
 		}
 		t.Error("wrong number of nodes",
-			"\nparent data: ", parent.Data[0],
+			"\nparent data: ", parent.Data,
 			"\nexpected: ", numExpected,
 			"\nfound: ", len(nodes),
 			"\nfound data: ", nodesData)
@@ -194,18 +202,29 @@ func TestGet (t *testing.T) {
 	getParentTest(t, b1, b2)
 
 	//trees may be one to high after keyChain update
-	getChildrenTest(t, rootNode, 2) //2 immediate
-
+	dbm = true
+	i:= 0
+	t.Error(i)
+	i++
+	fmt.Println(rootNode)
+	getChildrenTest(t, rootNode, 12) //all nodes have 
+	t.Error(i)
+	i++
 	getChildrenTest(t, f0, 4) //4 immediate
-
+	t.Error(i)
+	i++
 	getChildrenTest(t, t0, 2) //2 immediate
-
+	t.Error(i)
+	i++
 	getChildrenTest(t, b0, 2) //2 immediate
-
+	t.Error(i)
+	i++
 	getChildrenTest(t, b1, 2) //2 immediate
-
+	t.Error(i)
+	i++
 	getChildrenTest(t, b2, 0) //no immediate
-
+	t.Error(i)
+	i++
 
 	getSiblingsTest(t, f0, 1) // this really should be 1
 

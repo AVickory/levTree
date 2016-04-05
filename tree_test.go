@@ -19,7 +19,7 @@ func testNode(t *testing.T, parent Node, n Node, data []byte) {
 	if d := n.Data; !bytes.Equal(d, data) {
 		t.Error("NODE HAS WRONG DATA: ", d)
 	}
-	if n.IsTree() {
+	if n.IsTree {
 		if len(n.Key()) != len(parent.GetChildBucket().Key())+24 {
 			t.Error("NODE KEY SHOULD BE A GUUID: ", len(n.Key()))
 		}

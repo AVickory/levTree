@@ -220,6 +220,19 @@ func GetChildren(parent locateable) ([]Node, error) {
 
 }
 
+//only works for trees right now.  using it on branch's is not reccomended
+//since it requires a breadth first search and will be a lot slower.
+func GetDescendants(parent locateable) ([]Node, error) {
+	descendants, err := getNodesFromBucket(parent.GetDescendantBucket())
+
+	if err != nil {
+		fmt.Println("error getting descendants nodes: ", err)
+		return descendants, err
+	}
+
+	return descendants, err
+}
+
 func GetSiblings(l locateable) ([]Node, error) {
 	siblings, err := getNodesFromBucket(l.GetSiblingBucket())
 

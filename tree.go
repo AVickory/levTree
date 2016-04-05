@@ -54,6 +54,7 @@ type locateable interface {
 	GetLoc() keyChain.Loc
 	GetParentLoc() keyChain.Loc
 	GetChildBucket() keyChain.Loc
+	GetDescendantBucket() keyChain.Loc
 	GetSiblingBucket() keyChain.Loc
 	MakeChildBranch() (keyChain.KeyChain, error)
 	MakeChildTree() (keyChain.KeyChain, error)
